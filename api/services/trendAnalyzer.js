@@ -1,33 +1,16 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
-interface PinterestTrend {
-  keyword: string;
-  volume: number;
-  category: string;
-  growth: number;
-}
-
-interface ShopeeProduct {
-  id: string;
-  name: string;
-  price: number;
-  image: string;
-  link: string;
-  rating: number;
-  soldCount: number;
-  category: string;
-  affiliateLink: string;
-}
-
 class TrendAnalyzer {
-  private readonly PINTEREST_TRENDS_URL = 'https://trends.pinterest.com/trending/';
-  private readonly SHOPEE_SEARCH_URL = 'https://shopee.com.br/search';
+  constructor() {
+    this.PINTEREST_TRENDS_URL = 'https://trends.pinterest.com/trending/';
+    this.SHOPEE_SEARCH_URL = 'https://shopee.com.br/search';
+  }
 
-  async getPinterestTrends(): Promise<PinterestTrend[]> {
+  async getPinterestTrends() {
     try {
       // Simulação - em produção usaria Pinterest API
-      const mockTrends: PinterestTrend[] = [
+      const mockTrends = [
         { keyword: 'organização cozinha', volume: 125000, category: 'casa', growth: 15 },
         { keyword: 'gadgets cozinha', volume: 98000, category: 'casa', growth: 22 },
         { keyword: 'iluminação led', volume: 156000, category: 'casa', growth: 18 },
@@ -42,7 +25,7 @@ class TrendAnalyzer {
     }
   }
 
-  async getShopeeProductsByKeyword(keyword: string, limit = 20): Promise<ShopeeProduct[]> {
+  async getShopeeProductsByKeyword(keyword, limit = 20) {
     try {
       const searchUrl = `${this.SHOPEE_SEARCH_URL}?keyword=${encodeURIComponent(keyword)}&limit=${limit}`;
 
@@ -51,7 +34,7 @@ class TrendAnalyzer {
       const response = await axios.get(proxyUrl, { timeout: 10000 });
 
       const $ = cheerio.load(response.data);
-      const products: ShopeeProduct[] = [];
+      const products = [];
 
       // Seletor CSS para produtos Shopee (pode precisar ajuste)
       $('.item-listing__item').each((index, element) => {
@@ -89,17 +72,13 @@ class TrendAnalyzer {
     }
   }
 
-  private generateAffiliateLink(originalLink: string): string {
+  generateAffiliateLink(originalLink) {
     // Em produção, implementar lógica real de afiliado Shopee
     // Por enquanto, retorna o link original
     return originalLink;
   }
 
-  async findBestMatches(): Promise<Array<{
-    trend: PinterestTrend;
-    products: ShopeeProduct[];
-    score: number;
-  }>> {
+  async findBestMatches() {
     const trends = await this.getPinterestTrends();
     const matches = [];
 
@@ -124,4 +103,3 @@ class TrendAnalyzer {
 }
 
 export { TrendAnalyzer };
-export type { PinterestTrend, ShopeeProduct };

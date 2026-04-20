@@ -22,7 +22,7 @@ export default async function handler(req, res) {
         rating: product.rating || 0,
         soldCount: product.soldCount || 0,
         category: product.category || 'geral',
-        affiliateLink: product.link // Adicionar lógica de afiliado aqui
+        affiliateLink: product.affiliateLink || product.link // Usar affiliateLink se disponível
       }));
 
     res.status(200).json({

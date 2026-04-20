@@ -1,10 +1,12 @@
-import express from 'express';
-import { TrendAnalyzer } from '../services/trendAnalyzer.js';
+import { TrendAnalyzer } from '../../services/trendAnalyzer.js';
 
-const router = express.Router();
 const analyzer = new TrendAnalyzer();
 
-router.get('/recommendations', async (req, res) => {
+export default async function handler(req, res) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ success: false, message: 'Method not allowed' });
+  }
+
   try {
     const matches = await analyzer.findBestMatches();
     const recommendations = matches.slice(0, 5).map(match => ({
@@ -15,8 +17,7 @@ router.get('/recommendations', async (req, res) => {
 
     res.json({ success: true, data: recommendations });
   } catch (error) {
+    console.error('Erro ao gerar recomendações:', error);
     res.status(500).json({ success: false, error: 'Erro ao gerar recomendações' });
   }
-});
-
-export { router as productRouter };
+}

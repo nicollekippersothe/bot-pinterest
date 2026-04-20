@@ -17,6 +17,7 @@ type Product = {
   note: string;
   status: PinStatus;
   schedule: string;
+  scheduleDate?: string;
 };
 
 type TrendMatch = {
@@ -113,10 +114,30 @@ function generateCta(link: string) {
   return `Veja o produto na Shopee e aproveite o link de afiliada: ${affLink}`;
 }
 
+function getTodayDateKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function scheduleProduct(index: number) {
   const day = scheduleDays[index % scheduleDays.length];
   const time = scheduleTimes[Math.floor(index / scheduleDays.length) % scheduleTimes.length];
   return `${day} às ${time}`;
+}
+
+function buildScheduleItem(index: number, dailyLimit: number) {
+  const today = new Date();
+  const dayOffset = Math.floor(index / dailyLimit);
+  const scheduleSlot = index % dailyLimit;
+  const scheduledDate = new Date(today);
+  scheduledDate.setDate(today.getDate() + dayOffset);
+  const weekday = scheduleDays[scheduledDate.getDay()];
+  const day = String(scheduledDate.getDate()).padStart(2, '0');
+  const month = String(scheduledDate.getMonth() + 1).padStart(2, '0');
+  const time = scheduleTimes[scheduleSlot % scheduleTimes.length];
+  return {
+    schedule: `${weekday} ${day}/${month} às ${time}`,
+    scheduleDate: scheduledDate.toISOString().slice(0, 10),
+  };
 }
 
 function toCsv(products: Product[]) {
@@ -155,6 +176,7 @@ export default function App() {
   const [trendMatches, setTrendMatches] = useState<TrendMatch[]>([]);
   const [loadingTrends, setLoadingTrends] = useState(false);
   const [autoMode, setAutoMode] = useState(false);
+  const [autoScheduleEnabled, setAutoScheduleEnabled] = useState(false);
   const [pinterestEmail, setPinterestEmail] = useState('');
   const [pinterestPassword, setPinterestPassword] = useState('');
   const [uploadedProducts, setUploadedProducts] = useState<Array<{
@@ -187,6 +209,16 @@ export default function App() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
   }, [products]);
 
+  useEffect(() => {
+    if (!autoScheduleEnabled || !pinterestEmail || !pinterestPassword) return;
+
+    const intervalId = window.setInterval(() => {
+      startAutoPosting();
+    }, 1000 * 60 * 60);
+
+    return () => window.clearInterval(intervalId);
+  }, [autoScheduleEnabled, pinterestEmail, pinterestPassword, dailyLimit, products]);
+
   const productPreview = useMemo(() => {
     if (!name) return null;
     const link = affiliateLink || productLink;
@@ -202,20 +234,60 @@ export default function App() {
   const pendingCount = products.filter((product) => product.status === 'pendente').length;
   const todayPublishCount = Math.min(pendingCount, dailyLimit);
 
-  const addProduct = () => {
+  const refreshScheduledProductsForToday = (list: Product[]) => {
+    const todayKey = getTodayDateKey();
+    return list.map((product) => {
+      if (product.status === 'agendado' && product.scheduleDate === todayKey) {
+        return { ...product, status: 'pendente' as PinStatus };
+      }
+      return product;
+    });
+  };
+
+  const fetchShopeeImageFromUrl = async (url: string) => {
+    if (!url.includes('shopee')) {
+      throw new Error('Cole um link Shopee válido para buscar imagem.');
+    }
+
+    const response = await fetch(`/api/shopee/image?url=${encodeURIComponent(url)}`);
+    const data = await response.json();
+
+    if (!data.success || !data.imageUrl) {
+      throw new Error(data.message || 'Não foi possível extrair a imagem automaticamente.');
+    }
+
+    return data.imageUrl;
+  };
+
+  const addProduct = async () => {
     if (!productLink || !name || !price) {
       setErrorMessage('Preencha link, nome e preço para gerar o pin.');
       return;
     }
 
+    let productImageUrl = imageUrl;
+    if (!productImageUrl && productLink.includes('shopee')) {
+      setErrorMessage('');
+      setLoadingImage(true);
+      try {
+        productImageUrl = await fetchShopeeImageFromUrl(productLink);
+        setImageUrl(productImageUrl);
+      } catch (error: any) {
+        setErrorMessage(error.message || 'Não foi possível buscar a imagem do Shopee.');
+      } finally {
+        setLoadingImage(false);
+      }
+    }
+
     const linkForCta = affiliateLink || productLink;
+    const { schedule, scheduleDate } = buildScheduleItem(products.length, dailyLimit);
     const newProduct: Product = {
       id: crypto.randomUUID(),
       productLink,
       affiliateLink,
       name,
       price: formatPrice(price),
-      imageUrl,
+      imageUrl: productImageUrl,
       title: generateSeoTitle(name, price),
       description: generateDescription(name, price),
       hook: generateHook(name),
@@ -223,7 +295,8 @@ export default function App() {
       cta: generateCta(linkForCta),
       note,
       status,
-      schedule: scheduleProduct(products.length),
+      schedule,
+      scheduleDate,
     };
 
     setProducts([newProduct, ...products]);
@@ -265,27 +338,46 @@ export default function App() {
     URL.revokeObjectURL(url);
   };
 
-  const fetchShopeeImage = async () => {
-    if (!productLink.includes('shopee')) {
-      setErrorMessage('Cole um link Shopee válido para buscar imagem.');
+  const addFeedProducts = () => {
+    if (uploadedProducts.length === 0) {
+      setErrorMessage('Nenhum produto de feed para agendar.');
       return;
     }
 
-    setErrorMessage('');
-    setLoadingImage(true);
+    const scheduledProducts = uploadedProducts.map((product, index) => {
+      const absoluteIndex = products.length + index;
+      const { schedule, scheduleDate } = buildScheduleItem(absoluteIndex, dailyLimit);
+      return {
+        id: crypto.randomUUID(),
+        productLink: product.link || product.affiliateLink || '',
+        affiliateLink: product.affiliateLink || product.link || '',
+        name: product.name,
+        price: `R$${product.price.toFixed(2).replace('.', ',')}`,
+        imageUrl: product.image?.trim() ? product.image : 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&h=500&fit=crop',
+        title: generateSeoTitle(product.name, `R$${product.price}`),
+        description: generateDescription(product.name, `R$${product.price}`),
+        hook: generateHook(product.name),
+        hashtags: generateHashtags(product.name),
+        cta: generateCta(product.affiliateLink || product.link || ''),
+        note: `Feed: ${product.category} | Rating: ${product.rating}⭐ | Vendidos: ${product.soldCount}`,
+        status: (scheduleDate === getTodayDateKey() ? 'pendente' : 'agendado') as PinStatus,
+        schedule,
+        scheduleDate,
+      };
+    });
 
+    setProducts([...scheduledProducts, ...products]);
+    setUploadedProducts([]);
+    setErrorMessage(`✅ ${scheduledProducts.length} produtos agendados e prontos para publicar.`);
+  };
+
+  const fetchShopeeImage = async () => {
     try {
-      const response = await fetch(`/api/shopee/image?url=${encodeURIComponent(productLink)}`);
-      const data = await response.json();
-      if (data.success && data.imageUrl) {
-        setImageUrl(data.imageUrl);
-      } else {
-        setErrorMessage(data.message || 'Não foi possível extrair a imagem automaticamente. Cole a URL da imagem manualmente.');
-      }
-    } catch (error) {
-      setErrorMessage('Erro ao buscar imagem do Shopee. Verifique conexão ou tente inserir a URL manualmente.');
-    } finally {
-      setLoadingImage(false);
+      const image = await fetchShopeeImageFromUrl(productLink);
+      setImageUrl(image);
+      setErrorMessage('');
+    } catch (error: any) {
+      setErrorMessage(error.message || 'Erro ao buscar imagem do Shopee. Verifique conexão ou tente inserir a URL manualmente.');
     }
   };
 
@@ -308,6 +400,7 @@ export default function App() {
 
   const addFromTrend = (product: any, trend: any) => {
     const productLink = product.affiliateLink || product.link || '';
+    const { schedule, scheduleDate } = buildScheduleItem(products.length, dailyLimit);
     const newProduct: Product = {
       id: crypto.randomUUID(),
       productLink,
@@ -321,8 +414,9 @@ export default function App() {
       hashtags: generateHashtags(product.name),
       cta: generateCta(productLink),
       note: `Tendência: ${trend.keyword} (Score: ${Math.round(trend.volume * 0.4 + trend.growth * 0.3)})`,
-      status: 'pendente',
-      schedule: scheduleProduct(products.length),
+      status: (scheduleDate === getTodayDateKey() ? 'pendente' : 'agendado') as PinStatus,
+      schedule,
+      scheduleDate,
     };
 
     setProducts([newProduct, ...products]);
@@ -361,15 +455,20 @@ export default function App() {
         return;
       }
 
-      const pendingProducts = products.filter((product) => product.status === 'pendente');
+      const refreshedProducts = refreshScheduledProductsForToday(products);
+      setProducts(refreshedProducts);
+
+      const pendingProducts = refreshedProducts.filter((product) => product.status === 'pendente');
       if (pendingProducts.length === 0) {
-        setAutomationStatus('Nenhum produto pendente para publicar.');
+        setAutomationStatus('Nenhum produto pendente para publicar hoje. Aguarde a próxima data agendada.');
         return;
       }
 
       const productsToPublish = pendingProducts.slice(0, dailyLimit);
       if (pendingProducts.length > dailyLimit) {
         setAutomationStatus(`Limite diário de ${dailyLimit} posts. Serão enviados apenas ${productsToPublish.length} hoje.`);
+      } else {
+        setAutomationStatus('Publicando agora...');
       }
 
       const response = await fetch(`${BACKEND_URL}/automation/start-auto`, {
@@ -393,8 +492,8 @@ export default function App() {
       if (data.success) {
         setAutomationStatus('Postagem automática ativada');
         const completedIds = data.results?.filter((item: any) => item.success).map((item: any) => item.id) || [];
-        setProducts(products.map((product) =>
-          completedIds.includes(product.id) ? { ...product, status: 'publicado' } : product
+        setProducts(refreshedProducts.map((product) =>
+          completedIds.includes(product.id) ? { ...product, status: 'publicado' as PinStatus } : product
         ));
       } else {
         setAutomationStatus(data.message || 'Erro ao ativar automação');
@@ -403,6 +502,10 @@ export default function App() {
       console.error('Erro startAutoPosting:', error);
       setAutomationStatus('Erro na automação');
     }
+  };
+
+  const publishNow = async () => {
+    await startAutoPosting();
   };
 
   const updateProductStatus = (id: string, newStatus: PinStatus) => {
@@ -429,7 +532,8 @@ export default function App() {
 
           headers.forEach((header, index) => {
             const value = values[index] || '';
-            switch (header) {
+            const normalizedHeader = header.replace(/\s+/g, '').toLowerCase();
+            switch (normalizedHeader) {
               case 'nome':
               case 'name':
               case 'titulo':
@@ -449,13 +553,17 @@ export default function App() {
                 break;
               case 'link':
               case 'url':
+              case 'productlink':
                 product.link = value;
                 break;
               case 'affiliate':
               case 'affiliate_link':
+              case 'affiliatelink':
               case 'affiliateLink':
-              case 'link_afiliado':
+              case 'afiliado':
               case 'linkafiliado':
+              case 'link_de_afiliado':
+              case 'linkdeafiliado':
                 product.affiliateLink = value;
                 break;
               case 'avaliacao':
@@ -474,6 +582,10 @@ export default function App() {
                 break;
             }
           });
+
+          if (!product.affiliateLink && product.link) {
+            product.affiliateLink = product.link;
+          }
 
           return product;
         });
@@ -499,7 +611,36 @@ export default function App() {
         }));
 
       setUploadedProducts(validProducts);
-      setErrorMessage(`✅ ${validProducts.length} produtos carregados com sucesso!`);
+
+      if (validProducts.length > 0) {
+        const scheduledProducts = validProducts.map((product, index) => {
+          const absoluteIndex = products.length + index;
+          const { schedule, scheduleDate } = buildScheduleItem(absoluteIndex, dailyLimit);
+          return {
+            id: product.id,
+            productLink: product.link || product.affiliateLink || '',
+            affiliateLink: product.affiliateLink || product.link || '',
+            name: product.name,
+            price: `R$${product.price.toFixed(2).replace('.', ',')}`,
+            imageUrl: product.image?.trim() ? product.image : 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&h=500&fit=crop',
+            title: generateSeoTitle(product.name, `R$${product.price}`),
+            description: generateDescription(product.name, `R$${product.price}`),
+            hook: generateHook(product.name),
+            hashtags: generateHashtags(product.name),
+            cta: generateCta(product.affiliateLink || product.link || ''),
+            note: `Feed: ${product.category} | Rating: ${product.rating}⭐ | Vendidos: ${product.soldCount}`,
+            status: scheduleDate === getTodayDateKey() ? 'pendente' as PinStatus : 'agendado' as PinStatus,
+            schedule,
+            scheduleDate,
+          };
+        });
+
+        setProducts((currentProducts) => [...scheduledProducts, ...currentProducts]);
+        setUploadedProducts([]);
+        setErrorMessage(`✅ ${validProducts.length} produtos carregados e agendados automaticamente!`);
+      } else {
+        setErrorMessage('❌ Nenhum produto válido encontrado no arquivo.');
+      }
 
     } catch (error) {
       setErrorMessage('❌ Erro ao processar arquivo. Verifique o formato (CSV ou JSON).');
@@ -590,6 +731,15 @@ const productLink = product.affiliateLink || product.link;
                   </button>
                   <button onClick={startAutoPosting} className="rounded-2xl border border-slate-700/90 px-4 py-2 text-sm text-slate-100 transition hover:border-cyan-400">
                     Ativar Auto-posting
+                  </button>
+                  <button onClick={publishNow} className="rounded-2xl border border-slate-700/90 px-4 py-2 text-sm text-slate-100 transition hover:border-cyan-400">
+                    Publicar agora
+                  </button>
+                  <button
+                    onClick={() => setAutoScheduleEnabled(!autoScheduleEnabled)}
+                    className={`rounded-2xl px-4 py-2 text-sm font-semibold transition ${autoScheduleEnabled ? 'bg-emerald-500 text-slate-950' : 'border border-slate-700/90 text-slate-100'}`}
+                  >
+                    {autoScheduleEnabled ? 'Rodando em segundo plano' : 'Deixar rodando'}
                   </button>
                 </div>
               </div>
@@ -774,6 +924,14 @@ const productLink = product.affiliateLink || product.link;
                           </button>
                         </div>
                       ))}
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-3">
+                      <button
+                        onClick={addFeedProducts}
+                        className="rounded-2xl bg-cyan-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400"
+                      >
+                        Agendar todos do feed
+                      </button>
                     </div>
                     {uploadedProducts.length > 6 && (
                       <p className="mt-3 text-xs text-slate-400">... e mais {uploadedProducts.length - 6} produtos</p>

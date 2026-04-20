@@ -1,4 +1,6 @@
 import puppeteer from 'puppeteer';
+import * as fs from 'fs';
+import * as path from 'path';
 
 let browser = null;
 let page = null;
@@ -23,6 +25,6 @@ export default async function handler(req, res) {
     res.status(200).json({ success: true, message: 'Automação inicializada' });
   } catch (error) {
     console.error('Erro ao inicializar automação:', error);
-    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+    res.status(500).json({ success: false, error: 'Erro ao inicializar automação' });
   }
 }
