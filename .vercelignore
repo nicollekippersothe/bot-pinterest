@@ -1,0 +1,7 @@
+backend/
+node_modules/
+.git/
+.github/
+*.md
+.env*
+.vercel
