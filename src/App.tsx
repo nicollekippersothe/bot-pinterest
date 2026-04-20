@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import * as XLSX from 'xlsx';
 
 type PinStatus = 'pendente' | 'agendado' | 'publicado';
 
@@ -434,20 +435,6 @@ export default function App() {
     }
   };
 
-  const loginPinterest = async () => {
-    try {
-      const response = await fetch(`${BACKEND_URL}/automation/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: pinterestEmail, password: pinterestPassword }),
-      });
-      const data = await response.json();
-      setAutomationStatus(data.success ? 'Login realizado com sucesso' : 'Falha no login');
-    } catch (error) {
-      setAutomationStatus('Erro no login');
-    }
-  };
-
   const startAutoPosting = async () => {
     try {
       if (!pinterestEmail || !pinterestPassword) {
@@ -522,23 +509,55 @@ export default function App() {
       let parsedProducts: any[] = [];
 
       if (file.name.endsWith('.csv')) {
-        // Parse CSV
-        const lines = text.split('\n').filter(line => line.trim());
-        if (lines.length < 2) {
-          throw new Error('CSV deve ter pelo menos cabeçalho e uma linha de dados');
-        }
+        // Improved CSV parser to handle quoted fields
+        const parseCSV = (csvText: string) => {
+          const lines = csvText.split('\n').filter(line => line.trim());
+          if (lines.length < 2) return [];
 
-        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-        console.log('Headers encontrados:', headers);
+          const headers = parseCSVLine(lines[0]);
+          return lines.slice(1).map(line => {
+            const values = parseCSVLine(line);
+            const obj: any = {};
+            headers.forEach((header, index) => {
+              obj[header] = values[index] || '';
+            });
+            return obj;
+          });
+        };
 
-        parsedProducts = lines.slice(1).map((line, index) => {
-          const values = line.split(',').map(v => v.trim());
+        const parseCSVLine = (line: string) => {
+          const result = [];
+          let current = '';
+          let inQuotes = false;
+          for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            if (char === '"') {
+              if (inQuotes && line[i + 1] === '"') {
+                current += '"';
+                i++; // skip next quote
+              } else {
+                inQuotes = !inQuotes;
+              }
+            } else if (char === ',' && !inQuotes) {
+              result.push(current.trim());
+              current = '';
+            } else {
+              current += char;
+            }
+          }
+          result.push(current.trim());
+          return result;
+        };
+
+        const csvData = parseCSV(text);
+        console.log('CSV data parsed:', csvData);
+
+        parsedProducts = csvData.map(row => {
           const product: any = {};
-
-          headers.forEach((header, index) => {
-            const value = values[index] || '';
-            const normalizedHeader = header.replace(/\s+/g, '').toLowerCase();
-            switch (normalizedHeader) {
+          Object.keys(row).forEach(key => {
+            const normalizedKey = key.trim().toLowerCase().replace(/\s+/g, '');
+            const value = row[key].trim();
+            switch (normalizedKey) {
               case 'nome':
               case 'name':
               case 'titulo':
@@ -551,7 +570,6 @@ export default function App() {
               case 'price':
               case 'valor':
               case 'preço':
-                // Melhor parsing de preço
                 const cleanPrice = value.replace(/[^\d.,]/g, '').replace(',', '.');
                 product.price = parseFloat(cleanPrice) || 0;
                 break;
@@ -597,26 +615,96 @@ export default function App() {
                 break;
             }
           });
-
-          if (!product.affiliateLink && product.link) {
-            product.affiliateLink = product.link;
-          }
-
           return product;
         });
 
-        console.log('Produtos parseados:', parsedProducts);
+        console.log('Produtos parseados do CSV:', parsedProducts);
+      } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+        // Parse Excel
+        const arrayBuffer = await file.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const excelData = XLSX.utils.sheet_to_json(worksheet);
+
+        parsedProducts = excelData.map((row: any) => {
+          const product: any = {};
+          Object.keys(row).forEach(key => {
+            const normalizedKey = key.trim().toLowerCase().replace(/\s+/g, '');
+            const value = String(row[key]).trim();
+            switch (normalizedKey) {
+              case 'nome':
+              case 'name':
+              case 'titulo':
+              case 'title':
+              case 'produto':
+              case 'product':
+                product.name = value;
+                break;
+              case 'preco':
+              case 'price':
+              case 'valor':
+              case 'preço':
+                const cleanPrice = value.replace(/[^\d.,]/g, '').replace(',', '.');
+                product.price = parseFloat(cleanPrice) || 0;
+                break;
+              case 'imagem':
+              case 'image':
+              case 'foto':
+              case 'photo':
+              case 'thumbnail':
+                product.image = value;
+                break;
+              case 'link':
+              case 'url':
+              case 'productlink':
+              case 'linkproduto':
+                product.link = value;
+                break;
+              case 'affiliate':
+              case 'affiliate_link':
+              case 'affiliatelink':
+              case 'affiliateLink':
+              case 'afiliado':
+              case 'linkafiliado':
+              case 'link_de_afiliado':
+              case 'linkdeafiliado':
+                product.affiliateLink = value;
+                break;
+              case 'avaliacao':
+              case 'rating':
+              case 'nota':
+              case 'estrelas':
+                product.rating = parseFloat(value) || 0;
+                break;
+              case 'vendidos':
+              case 'sold':
+              case 'vendas':
+              case 'vendido':
+                product.soldCount = parseInt(value.replace(/\D/g, '')) || 0;
+                break;
+              case 'categoria':
+              case 'category':
+              case 'tipo':
+                product.category = value;
+                break;
+            }
+          });
+          return product;
+        });
+
+        console.log('Produtos parseados do Excel:', parsedProducts);
       } else if (file.name.endsWith('.json')) {
         // Parse JSON
         const jsonData = JSON.parse(text);
         parsedProducts = Array.isArray(jsonData) ? jsonData : [jsonData];
       }
 
-      // Filtrar e validar produtos - tornar mais flexível
+      // Filtrar e validar produtos
       const validProducts = parsedProducts
         .filter(product => {
           const hasName = product.name && product.name.trim().length > 0;
-          const hasValidPrice = product.price > 0; // Removido limite superior para ser mais flexível
+          const hasValidPrice = product.price > 0;
           const isValid = hasName && hasValidPrice;
 
           if (!isValid) {
@@ -668,7 +756,7 @@ export default function App() {
         setUploadedProducts([]);
         setErrorMessage(`✅ ${validProducts.length} produtos carregados e agendados automaticamente!`);
       } else {
-        setErrorMessage(`❌ Nenhum produto válido encontrado. Verifique se o arquivo tem colunas 'nome' e 'preco' com valores válidos. Produtos parseados: ${parsedProducts.length}`);
+        setErrorMessage(`❌ Nenhum produto válido encontrado. Verifique se o arquivo tem colunas como 'nome' e 'preco' com valores válidos. Produtos parseados: ${parsedProducts.length}`);
       }
 
     } catch (error) {
@@ -796,6 +884,12 @@ const productLink = product.affiliateLink || product.link;
               </div>
 
               <div className="mt-6 space-y-4">
+                <div className="rounded-3xl border border-amber-500/30 bg-amber-500/10 p-4">
+                  <h3 className="text-sm font-semibold text-amber-300">⚠️ Nota sobre Automação</h3>
+                  <p className="mt-2 text-sm text-amber-200">
+                    A automação usa Puppeteer para controlar o navegador. Para funcionar corretamente, execute o projeto localmente com <code className="bg-amber-500/20 px-1 rounded">npm run dev</code> e acesse via localhost. O deploy no Vercel pode ter limitações com Puppeteer.
+                  </p>
+                </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="space-y-2 text-sm text-slate-300">
                     Email Pinterest
@@ -820,9 +914,6 @@ const productLink = product.affiliateLink || product.link;
                 <div className="flex gap-3">
                   <button onClick={initAutomation} className="rounded-3xl bg-slate-700 px-4 py-2 text-sm text-slate-100 transition hover:bg-slate-600">
                     Inicializar Bot
-                  </button>
-                  <button onClick={loginPinterest} className="rounded-3xl bg-slate-700 px-4 py-2 text-sm text-slate-100 transition hover:bg-slate-600">
-                    Fazer Login
                   </button>
                 </div>
               </div>
@@ -916,9 +1007,9 @@ const productLink = product.affiliateLink || product.link;
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h3 className="text-lg font-semibold text-white">📁 Upload de Feed Shopee</h3>
-                    <p className="mt-1 text-sm text-slate-400">Faça upload de arquivo CSV ou JSON com seus produtos para processamento em lote.</p>
+                    <p className="mt-1 text-sm text-slate-400">Faça upload de arquivo CSV, Excel (.xlsx/.xls) ou JSON com seus produtos para processamento em lote.</p>
                     <details className="mt-2">
-                      <summary className="text-xs text-cyan-300 cursor-pointer hover:text-cyan-200">📋 Formato esperado do CSV</summary>
+                      <summary className="text-xs text-cyan-300 cursor-pointer hover:text-cyan-200">📋 Formato esperado do CSV/Excel</summary>
                       <div className="mt-2 p-3 bg-slate-900/50 rounded-lg text-xs text-slate-300">
                         <strong className="text-slate-200">Colunas obrigatórias:</strong><br />
                         <code>nome</code> ou <code>name</code> - Nome do produto<br />
@@ -942,7 +1033,7 @@ const productLink = product.affiliateLink || product.link;
                     {isUploading ? 'Processando...' : 'Escolher arquivo'}
                     <input
                       type="file"
-                      accept=".csv,.json"
+                      accept=".csv,.json,.xlsx,.xls"
                       onChange={handleFileUpload}
                       disabled={isUploading}
                       className="hidden"
