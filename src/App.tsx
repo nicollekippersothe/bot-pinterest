@@ -524,9 +524,14 @@ export default function App() {
       if (file.name.endsWith('.csv')) {
         // Parse CSV
         const lines = text.split('\n').filter(line => line.trim());
-        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        if (lines.length < 2) {
+          throw new Error('CSV deve ter pelo menos cabeçalho e uma linha de dados');
+        }
 
-        parsedProducts = lines.slice(1).map(line => {
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        console.log('Headers encontrados:', headers);
+
+        parsedProducts = lines.slice(1).map((line, index) => {
           const values = line.split(',').map(v => v.trim());
           const product: any = {};
 
@@ -538,22 +543,29 @@ export default function App() {
               case 'name':
               case 'titulo':
               case 'title':
+              case 'produto':
+              case 'product':
                 product.name = value;
                 break;
               case 'preco':
               case 'price':
               case 'valor':
-                product.price = parseFloat(value.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+              case 'preço':
+                // Melhor parsing de preço
+                const cleanPrice = value.replace(/[^\d.,]/g, '').replace(',', '.');
+                product.price = parseFloat(cleanPrice) || 0;
                 break;
               case 'imagem':
               case 'image':
               case 'foto':
               case 'photo':
+              case 'thumbnail':
                 product.image = value;
                 break;
               case 'link':
               case 'url':
               case 'productlink':
+              case 'linkproduto':
                 product.link = value;
                 break;
               case 'affiliate':
@@ -569,15 +581,18 @@ export default function App() {
               case 'avaliacao':
               case 'rating':
               case 'nota':
+              case 'estrelas':
                 product.rating = parseFloat(value) || 0;
                 break;
               case 'vendidos':
               case 'sold':
               case 'vendas':
+              case 'vendido':
                 product.soldCount = parseInt(value.replace(/\D/g, '')) || 0;
                 break;
               case 'categoria':
               case 'category':
+              case 'tipo':
                 product.category = value;
                 break;
             }
@@ -589,18 +604,30 @@ export default function App() {
 
           return product;
         });
+
+        console.log('Produtos parseados:', parsedProducts);
       } else if (file.name.endsWith('.json')) {
         // Parse JSON
         const jsonData = JSON.parse(text);
         parsedProducts = Array.isArray(jsonData) ? jsonData : [jsonData];
       }
 
-      // Filtrar e validar produtos
+      // Filtrar e validar produtos - tornar mais flexível
       const validProducts = parsedProducts
-        .filter(product => product.name && product.price >= 15 && product.price <= 55)
+        .filter(product => {
+          const hasName = product.name && product.name.trim().length > 0;
+          const hasValidPrice = product.price > 0; // Removido limite superior para ser mais flexível
+          const isValid = hasName && hasValidPrice;
+
+          if (!isValid) {
+            console.log('Produto inválido:', product, { hasName, hasValidPrice });
+          }
+
+          return isValid;
+        })
         .map(product => ({
           id: `feed_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          name: product.name || '',
+          name: product.name?.trim() || '',
           price: product.price || 0,
           image: product.image || '',
           link: product.link || '',
@@ -609,6 +636,8 @@ export default function App() {
           soldCount: product.soldCount || 0,
           category: product.category || 'geral',
         }));
+
+      console.log('Produtos válidos:', validProducts);
 
       setUploadedProducts(validProducts);
 
@@ -639,11 +668,12 @@ export default function App() {
         setUploadedProducts([]);
         setErrorMessage(`✅ ${validProducts.length} produtos carregados e agendados automaticamente!`);
       } else {
-        setErrorMessage('❌ Nenhum produto válido encontrado no arquivo.');
+        setErrorMessage(`❌ Nenhum produto válido encontrado. Verifique se o arquivo tem colunas 'nome' e 'preco' com valores válidos. Produtos parseados: ${parsedProducts.length}`);
       }
 
     } catch (error) {
-      setErrorMessage('❌ Erro ao processar arquivo. Verifique o formato (CSV ou JSON).');
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      setErrorMessage(`❌ Erro ao processar arquivo: ${errorMessage}`);
       console.error('Erro no upload:', error);
     } finally {
       setIsUploading(false);
@@ -887,6 +917,26 @@ const productLink = product.affiliateLink || product.link;
                   <div>
                     <h3 className="text-lg font-semibold text-white">📁 Upload de Feed Shopee</h3>
                     <p className="mt-1 text-sm text-slate-400">Faça upload de arquivo CSV ou JSON com seus produtos para processamento em lote.</p>
+                    <details className="mt-2">
+                      <summary className="text-xs text-cyan-300 cursor-pointer hover:text-cyan-200">📋 Formato esperado do CSV</summary>
+                      <div className="mt-2 p-3 bg-slate-900/50 rounded-lg text-xs text-slate-300">
+                        <strong className="text-slate-200">Colunas obrigatórias:</strong><br />
+                        <code>nome</code> ou <code>name</code> - Nome do produto<br />
+                        <code>preco</code> ou <code>price</code> - Preço (ex: 29.90 ou R$29,90)<br />
+                        <br />
+                        <strong className="text-slate-200">Colunas opcionais:</strong><br />
+                        <code>link</code> ou <code>url</code> - Link do produto<br />
+                        <code>affiliate_link</code> ou <code>link_afiliado</code> - Link de afiliado<br />
+                        <code>imagem</code> ou <code>image</code> - URL da imagem<br />
+                        <code>categoria</code> ou <code>category</code> - Categoria<br />
+                        <code>avaliacao</code> ou <code>rating</code> - Avaliação (0-5)<br />
+                        <code>vendidos</code> ou <code>sold</code> - Quantidade vendida<br />
+                        <br />
+                        <strong className="text-slate-200">Exemplo:</strong><br />
+                        <code>nome,preco,link,affiliate_link,imagem<br />
+                        "Cortador de Alho USB",29.90,"https://shopee.com.br/...","https://shopee.com.br/afiliado/...","https://..."</code>
+                      </div>
+                    </details>
                   </div>
                   <label className="cursor-pointer rounded-2xl bg-slate-700 px-4 py-2 text-sm text-slate-100 transition hover:bg-slate-600">
                     {isUploading ? 'Processando...' : 'Escolher arquivo'}
