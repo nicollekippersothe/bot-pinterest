@@ -5,6 +5,7 @@ type PinStatus = 'pendente' | 'agendado' | 'publicado';
 type Product = {
   id: string;
   productLink: string;
+  affiliateLink: string;
   name: string;
   price: string;
   imageUrl: string;
@@ -73,7 +74,7 @@ const keywords = [
 ];
 
 const STORAGE_KEY = 'bot-pinterest-produtos';
-const BACKEND_URL = 'http://localhost:3001/api';
+const BACKEND_URL = '/api';
 
 function generateSeoTitle(name: string, price: string) {
   const cleanName = name.trim().replace(/\s+/g, ' ');
@@ -119,11 +120,12 @@ function scheduleProduct(index: number) {
 }
 
 function toCsv(products: Product[]) {
-  const headers = ['Título', 'Descrição', 'Link', 'Imagem', 'Agenda', 'Status'];
+  const headers = ['Título', 'Descrição', 'Link', 'Link Afiliado', 'Imagem', 'Agenda', 'Status'];
   const rows = products.map((product) => [
     product.title,
     product.description,
     product.productLink,
+    product.affiliateLink,
     product.imageUrl,
     product.schedule,
     product.status,
@@ -141,6 +143,7 @@ function formatPrice(value: string) {
 
 export default function App() {
   const [productLink, setProductLink] = useState('');
+  const [affiliateLink, setAffiliateLink] = useState('');
   const [name, setName] = useState('');
   const [price, setPrice] = useState('R$15,00');
   const [imageUrl, setImageUrl] = useState('');
@@ -160,12 +163,14 @@ export default function App() {
     price: number;
     image: string;
     link: string;
+    affiliateLink: string;
     rating: number;
     soldCount: number;
     category: string;
   }>>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [automationStatus, setAutomationStatus] = useState('');
+  const [dailyLimit, setDailyLimit] = useState(3);
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -184,14 +189,18 @@ export default function App() {
 
   const productPreview = useMemo(() => {
     if (!name) return null;
+    const link = affiliateLink || productLink;
     return {
       title: generateSeoTitle(name, price),
       description: generateDescription(name, price),
       hook: generateHook(name),
       hashtags: generateHashtags(name),
-      cta: generateCta(productLink),
+      cta: generateCta(link),
     };
-  }, [name, price, productLink]);
+  }, [name, price, productLink, affiliateLink]);
+
+  const pendingCount = products.filter((product) => product.status === 'pendente').length;
+  const todayPublishCount = Math.min(pendingCount, dailyLimit);
 
   const addProduct = () => {
     if (!productLink || !name || !price) {
@@ -199,9 +208,11 @@ export default function App() {
       return;
     }
 
+    const linkForCta = affiliateLink || productLink;
     const newProduct: Product = {
       id: crypto.randomUUID(),
       productLink,
+      affiliateLink,
       name,
       price: formatPrice(price),
       imageUrl,
@@ -209,7 +220,7 @@ export default function App() {
       description: generateDescription(name, price),
       hook: generateHook(name),
       hashtags: generateHashtags(name),
-      cta: generateCta(productLink),
+      cta: generateCta(linkForCta),
       note,
       status,
       schedule: scheduleProduct(products.length),
@@ -217,6 +228,7 @@ export default function App() {
 
     setProducts([newProduct, ...products]);
     setProductLink('');
+    setAffiliateLink('');
     setName('');
     setPrice('R$15,00');
     setImageUrl('');
@@ -298,9 +310,11 @@ export default function App() {
   };
 
   const addFromTrend = (product: any, trend: any) => {
+    const productLink = product.affiliateLink || product.link || '';
     const newProduct: Product = {
       id: crypto.randomUUID(),
-      productLink: product.affiliateLink,
+      productLink,
+      affiliateLink: product.affiliateLink || product.link || '',
       name: product.name,
       price: `R$${product.price.toFixed(2).replace('.', ',')}`,
       imageUrl: product.image,
@@ -308,7 +322,7 @@ export default function App() {
       description: generateDescription(product.name, `R$${product.price}`),
       hook: generateHook(product.name),
       hashtags: generateHashtags(product.name),
-      cta: generateCta(product.affiliateLink),
+      cta: generateCta(productLink),
       note: `Tendência: ${trend.keyword} (Score: ${Math.round(trend.volume * 0.4 + trend.growth * 0.3)})`,
       status: 'pendente',
       schedule: scheduleProduct(products.length),
@@ -345,10 +359,51 @@ export default function App() {
 
   const startAutoPosting = async () => {
     try {
-      const response = await fetch(`${BACKEND_URL}/automation/start-auto`, { method: 'POST' });
+      if (!pinterestEmail || !pinterestPassword) {
+        setAutomationStatus('Informe email e senha do Pinterest antes de iniciar.');
+        return;
+      }
+
+      const pendingProducts = products.filter((product) => product.status === 'pendente');
+      if (pendingProducts.length === 0) {
+        setAutomationStatus('Nenhum produto pendente para publicar.');
+        return;
+      }
+
+      const productsToPublish = pendingProducts.slice(0, dailyLimit);
+      if (pendingProducts.length > dailyLimit) {
+        setAutomationStatus(`Limite diário de ${dailyLimit} posts. Serão enviados apenas ${productsToPublish.length} hoje.`);
+      }
+
+      const response = await fetch(`${BACKEND_URL}/automation/start-auto`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: pinterestEmail,
+          password: pinterestPassword,
+          products: productsToPublish.map((product) => ({
+            id: product.id,
+            title: product.title,
+            description: product.description,
+            imageUrl: product.imageUrl,
+            link: product.affiliateLink || product.productLink,
+            hashtags: product.hashtags,
+          })),
+        }),
+      });
+
       const data = await response.json();
-      setAutomationStatus(data.success ? 'Postagem automática ativada' : 'Erro ao ativar automação');
+      if (data.success) {
+        setAutomationStatus('Postagem automática ativada');
+        const completedIds = data.results?.filter((item: any) => item.success).map((item: any) => item.id) || [];
+        setProducts(products.map((product) =>
+          completedIds.includes(product.id) ? { ...product, status: 'publicado' } : product
+        ));
+      } else {
+        setAutomationStatus(data.message || 'Erro ao ativar automação');
+      }
     } catch (error) {
+      console.error('Erro startAutoPosting:', error);
       setAutomationStatus('Erro na automação');
     }
   };
@@ -399,6 +454,13 @@ export default function App() {
               case 'url':
                 product.link = value;
                 break;
+              case 'affiliate':
+              case 'affiliate_link':
+              case 'affiliateLink':
+              case 'link_afiliado':
+              case 'linkafiliado':
+                product.affiliateLink = value;
+                break;
               case 'avaliacao':
               case 'rating':
               case 'nota':
@@ -433,6 +495,7 @@ export default function App() {
           price: product.price || 0,
           image: product.image || '',
           link: product.link || '',
+          affiliateLink: product.affiliateLink || product.link || '',
           rating: product.rating || 0,
           soldCount: product.soldCount || 0,
           category: product.category || 'geral',
@@ -453,17 +516,19 @@ export default function App() {
     // Imagem padrão se não tiver no CSV
     const defaultPlaceholder = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&h=500&fit=crop';
     
-    const newProduct: Product = {
-      id: crypto.randomUUID(),
-      productLink: product.link,
-      name: product.name,
-      price: `R$${product.price.toFixed(2).replace('.', ',')}`,
-      imageUrl: product.image && product.image.trim() ? product.image : defaultPlaceholder,
-      title: generateSeoTitle(product.name, `R$${product.price}`),
-      description: generateDescription(product.name, `R$${product.price}`),
-      hook: generateHook(product.name),
-      hashtags: generateHashtags(product.name),
-      cta: generateCta(product.link),
+const productLink = product.affiliateLink || product.link;
+      const newProduct: Product = {
+        id: crypto.randomUUID(),
+        productLink,
+        affiliateLink: product.affiliateLink || product.link,
+        name: product.name,
+        price: `R$${product.price.toFixed(2).replace('.', ',')}`,
+        imageUrl: product.image && product.image.trim() ? product.image : defaultPlaceholder,
+        title: generateSeoTitle(product.name, `R$${product.price}`),
+        description: generateDescription(product.name, `R$${product.price}`),
+        hook: generateHook(product.name),
+        hashtags: generateHashtags(product.name),
+        cta: generateCta(productLink),
       note: `Feed: ${product.category} | Rating: ${product.rating}⭐ | Vendidos: ${product.soldCount}`,
       status: 'pendente',
       schedule: scheduleProduct(products.length),
@@ -529,6 +594,27 @@ export default function App() {
                   <button onClick={startAutoPosting} className="rounded-2xl border border-slate-700/90 px-4 py-2 text-sm text-slate-100 transition hover:border-cyan-400">
                     Ativar Auto-posting
                   </button>
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-3xl border border-slate-800/70 bg-slate-950/80 p-4">
+                <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Limite diário</p>
+                <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm text-slate-300">Máximo de posts por dia: <strong>{dailyLimit}</strong></p>
+                  <p className="text-sm text-slate-300">Pins pendentes: <strong>{pendingCount}</strong></p>
+                </div>
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <label className="flex items-center gap-3 text-sm text-slate-300">
+                    <span>Limite diário:</span>
+                    <input
+                      type="number"
+                      min={1}
+                      value={dailyLimit}
+                      onChange={(event) => setDailyLimit(Math.max(1, parseInt(event.target.value) || 1))}
+                      className="w-24 rounded-3xl border border-slate-700/80 bg-slate-950 px-3 py-2 text-slate-100 outline-none transition focus:border-cyan-500"
+                    />
+                  </label>
+                  <p className="text-xs text-slate-500">Serão postados até {todayPublishCount} pins hoje.</p>
                 </div>
               </div>
 
@@ -703,7 +789,7 @@ export default function App() {
                   <div className="grid gap-2 sm:grid-cols-2 text-xs text-slate-500">
                     <div>
                       <strong className="text-slate-300">CSV:</strong><br />
-                      nome,preco,imagem,link,avaliacao,vendidos,categoria
+                      nome,preco,imagem,link,affiliate,avaliacao,vendidos,categoria
                     </div>
                     <div>
                       <strong className="text-slate-300">JSON:</strong><br />
@@ -719,6 +805,15 @@ export default function App() {
                     value={productLink}
                     onChange={(event) => setProductLink(event.target.value)}
                     placeholder="https://shopee.com.br/..."
+                    className="w-full rounded-3xl border border-slate-700/80 bg-slate-950 px-4 py-3 text-slate-100 outline-none transition focus:border-cyan-500"
+                  />
+                </label>
+                <label className="space-y-2 text-sm text-slate-300">
+                  Link de afiliado Shopee
+                  <input
+                    value={affiliateLink}
+                    onChange={(event) => setAffiliateLink(event.target.value)}
+                    placeholder="Seu link de afiliado ou shortlink"
                     className="w-full rounded-3xl border border-slate-700/80 bg-slate-950 px-4 py-3 text-slate-100 outline-none transition focus:border-cyan-500"
                   />
                 </label>
