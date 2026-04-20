@@ -20,16 +20,54 @@ async function ensureBrowser() {
   return page;
 }
 
+async function findSelector(page, selectors) {
+  for (const selector of selectors) {
+    const element = await page.$(selector);
+    if (element) return selector;
+  }
+  return null;
+}
+
 async function loginToPinterest(email, password) {
   const page = await ensureBrowser();
 
   await page.goto('https://www.pinterest.com/login/', { waitUntil: 'networkidle2' });
 
-  await page.type('input[name="id"]', email, { delay: 50 });
-  await page.type('input[name="password"]', password, { delay: 50 });
-  await page.click('button[type="submit"]');
+  const emailSelector = await findSelector(page, [
+    'input[name="id"]',
+    'input[name="email"]',
+    'input[type="email"]',
+  ]);
+  if (!emailSelector) {
+    throw new Error('Campo de email não encontrado no Pinterest');
+  }
 
-  await page.waitForNavigation({ waitUntil: 'networkidle2' });
+  const passwordSelector = await findSelector(page, ['input[name="password"]']);
+  if (!passwordSelector) {
+    throw new Error('Campo de senha não encontrado no Pinterest');
+  }
+
+  await page.type(emailSelector, email, { delay: 50 });
+  await page.type(passwordSelector, password, { delay: 50 });
+
+  const submitButton = await findSelector(page, [
+    'button[type="submit"]',
+    'button[data-test-id="registerFormButton"]',
+    'button[data-test-id="loginButton"]',
+  ]);
+  if (!submitButton) {
+    throw new Error('Botão de login não encontrado no Pinterest');
+  }
+
+  await Promise.all([
+    page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 20000 }).catch(() => {}),
+    page.click(submitButton),
+  ]);
+
+  if (page.url().includes('/login')) {
+    throw new Error('Login não avançou, talvez credenciais incorretas ou bloqueio de segurança');
+  }
+
   return page;
 }
 
