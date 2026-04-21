@@ -1,5 +1,32 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Component, useEffect, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import * as XLSX from 'xlsx';
+
+export class ErrorBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
+  state = { error: null };
+  static getDerivedStateFromError(error: Error) {
+    return { error: error.message };
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="min-h-screen bg-slate-950 flex items-center justify-center p-8">
+          <div className="rounded-3xl border border-rose-500/40 bg-rose-500/10 p-8 max-w-lg text-center">
+            <p className="text-rose-300 font-semibold text-lg">Algo deu errado</p>
+            <p className="mt-2 text-rose-200/70 text-sm">{this.state.error}</p>
+            <button
+              onClick={() => { this.setState({ error: null }); window.location.reload(); }}
+              className="mt-4 rounded-2xl bg-rose-500 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-400"
+            >
+              Recarregar
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 type PinStatus = 'pendente' | 'agendado' | 'publicado';
 
@@ -207,7 +234,11 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+    } catch {
+      // quota exceeded — ignore, products still live in memory
+    }
   }, [products]);
 
   useEffect(() => {
@@ -622,7 +653,7 @@ export default function App() {
       } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
         // Parse Excel
         const arrayBuffer = await file.arrayBuffer();
-        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         const excelData = XLSX.utils.sheet_to_json(worksheet);
