@@ -6,7 +6,7 @@
     "api/**/*.js": {
       "runtime": "@vercel/node@3.0.0",
       "maxDuration": 300,
-      "memory": 3008
+      "memory": 1024
     }
   },
   "rewrites": [
