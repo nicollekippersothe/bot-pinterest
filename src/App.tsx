@@ -220,6 +220,7 @@ export default function App() {
   }>>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [automationStatus, setAutomationStatus] = useState('');
+  const [runUrl, setRunUrl] = useState('');
   const [dailyLimit, setDailyLimit] = useState(3);
 
   useEffect(() => {
@@ -493,8 +494,6 @@ export default function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: pinterestEmail,
-          password: pinterestPassword,
           products: productsToPublish.map((product) => ({
             id: product.id,
             title: product.title,
@@ -508,13 +507,16 @@ export default function App() {
 
       const data = await response.json();
       if (data.success) {
-        setAutomationStatus('Postagem automática ativada');
-        const completedIds = data.results?.filter((item: any) => item.success).map((item: any) => item.id) || [];
+        setAutomationStatus(data.message || 'Job iniciado no GitHub Actions');
+        setRunUrl(data.runUrl || '');
         setProducts(refreshedProducts.map((product) =>
-          completedIds.includes(product.id) ? { ...product, status: 'publicado' as PinStatus } : product
+          productsToPublish.find((p) => p.id === product.id)
+            ? { ...product, status: 'agendado' as PinStatus }
+            : product
         ));
       } else {
-        setAutomationStatus(data.message || 'Erro ao ativar automação');
+        setAutomationStatus(data.error || 'Erro ao iniciar job');
+        setRunUrl('');
       }
     } catch (error) {
       console.error('Erro startAutoPosting:', error);
@@ -861,6 +863,16 @@ const productLink = product.affiliateLink || product.link;
               <div className="rounded-3xl border border-slate-800/70 bg-slate-950/80 p-4">
                 <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Status Bot</p>
                 <p className="mt-3 text-sm text-slate-300">{automationStatus || 'Aguardando configuração'}</p>
+                {runUrl && (
+                  <a
+                    href={runUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-2 block text-xs text-cyan-400 underline hover:text-cyan-300"
+                  >
+                    Ver progresso no GitHub Actions →
+                  </a>
+                )}
               </div>
             </div>
           </div>
@@ -914,38 +926,12 @@ const productLink = product.affiliateLink || product.link;
                 </div>
               </div>
 
-              <div className="mt-6 space-y-4">
-                <div className="rounded-3xl border border-amber-500/30 bg-amber-500/10 p-4">
-                  <h3 className="text-sm font-semibold text-amber-300">⚠️ Nota sobre Automação</h3>
-                  <p className="mt-2 text-sm text-amber-200">
-                    A automação usa Puppeteer para controlar o navegador. Para funcionar corretamente, execute o projeto localmente com <code className="bg-amber-500/20 px-1 rounded">npm run dev</code> e acesse via localhost. O deploy no Vercel pode ter limitações com Puppeteer.
+              <div className="mt-6">
+                <div className="rounded-3xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+                  <h3 className="text-sm font-semibold text-emerald-300">Como funciona</h3>
+                  <p className="mt-2 text-sm text-emerald-200">
+                    Ao clicar em "Publicar agora", a Vercel dispara um job no GitHub Actions com 7 GB de RAM. O Puppeteer roda no Actions e publica os pins usando as credenciais configuradas nos <strong>GitHub Secrets</strong> (<code className="bg-emerald-500/20 px-1 rounded">PINTEREST_EMAIL</code> e <code className="bg-emerald-500/20 px-1 rounded">PINTEREST_PASSWORD</code>).
                   </p>
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="space-y-2 text-sm text-slate-300">
-                    Email Pinterest
-                    <input
-                      value={pinterestEmail}
-                      onChange={(event) => setPinterestEmail(event.target.value)}
-                      placeholder="seu@email.com"
-                      className="w-full rounded-3xl border border-slate-700/80 bg-slate-950 px-4 py-3 text-slate-100 outline-none transition focus:border-cyan-500"
-                    />
-                  </label>
-                  <label className="space-y-2 text-sm text-slate-300">
-                    Senha Pinterest
-                    <input
-                      type="password"
-                      value={pinterestPassword}
-                      onChange={(event) => setPinterestPassword(event.target.value)}
-                      placeholder="••••••••"
-                      className="w-full rounded-3xl border border-slate-700/80 bg-slate-950 px-4 py-3 text-slate-100 outline-none transition focus:border-cyan-500"
-                    />
-                  </label>
-                </div>
-                <div className="flex gap-3">
-                  <button onClick={initAutomation} className="rounded-3xl bg-slate-700 px-4 py-2 text-sm text-slate-100 transition hover:bg-slate-600">
-                    Inicializar Bot
-                  </button>
                 </div>
               </div>
 
