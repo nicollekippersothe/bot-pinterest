@@ -1,4 +1,4 @@
-import { Component, useEffect, useMemo, useState } from 'react';
+import { Component, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import * as XLSX from 'xlsx';
 
@@ -222,6 +222,8 @@ export default function App() {
   const [automationStatus, setAutomationStatus] = useState('');
   const [runUrl, setRunUrl] = useState('');
   const [dailyLimit, setDailyLimit] = useState(3);
+  const [visibleCount, setVisibleCount] = useState(20);
+  const lsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -235,11 +237,14 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
-    } catch {
-      // quota exceeded — ignore, products still live in memory
-    }
+    if (lsTimerRef.current) clearTimeout(lsTimerRef.current);
+    lsTimerRef.current = setTimeout(() => {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+      } catch {
+        // quota exceeded — ignore, products still live in memory
+      }
+    }, 1000);
   }, [products]);
 
   useEffect(() => {
@@ -787,6 +792,7 @@ export default function App() {
 
         setProducts((currentProducts) => [...scheduledProducts, ...currentProducts]);
         setUploadedProducts([]);
+        setVisibleCount(20);
         setErrorMessage(`✅ ${validProducts.length} produtos carregados e agendados automaticamente!`);
       } else {
         setErrorMessage(`❌ Nenhum produto válido encontrado. Verifique se o arquivo tem colunas como 'nome' e 'preco' com valores válidos. Produtos parseados: ${parsedProducts.length}`);
@@ -1273,7 +1279,9 @@ const productLink = product.affiliateLink || product.link;
             {products.length === 0 ? (
               <div className="rounded-3xl border border-dashed border-slate-700/80 bg-slate-950/70 p-6 text-slate-400">Nenhum produto cadastrado ainda.</div>
             ) : (
-              products.map((product) => (
+              <>
+              <p className="text-xs text-slate-500">Mostrando {Math.min(visibleCount, products.length)} de {products.length} produtos</p>
+              {products.slice(0, visibleCount).map((product) => (
                 <article key={product.id} className="grid gap-4 rounded-3xl border border-slate-800/80 bg-slate-950/80 p-5 sm:grid-cols-[0.9fr_0.4fr]">
                   <div className="space-y-3">
                     <div className="flex items-start justify-between gap-3">
@@ -1341,7 +1349,16 @@ const productLink = product.affiliateLink || product.link;
                     </div>
                   </div>
                 </article>
-              ))
+              ))}
+              {visibleCount < products.length && (
+                <button
+                  onClick={() => setVisibleCount((n) => n + 20)}
+                  className="w-full rounded-3xl border border-slate-700/80 py-3 text-sm text-slate-300 transition hover:border-cyan-400 hover:text-cyan-300"
+                >
+                  Mostrar mais ({products.length - visibleCount} restantes)
+                </button>
+              )}
+              </>
             )}
           </div>
         </section>
