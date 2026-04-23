@@ -1,5 +1,32 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Component, useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import * as XLSX from 'xlsx';
+
+export class ErrorBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
+  state = { error: null };
+  static getDerivedStateFromError(error: Error) {
+    return { error: error.message };
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="min-h-screen bg-slate-950 flex items-center justify-center p-8">
+          <div className="rounded-3xl border border-rose-500/40 bg-rose-500/10 p-8 max-w-lg text-center">
+            <p className="text-rose-300 font-semibold text-lg">Algo deu errado</p>
+            <p className="mt-2 text-rose-200/70 text-sm">{this.state.error}</p>
+            <button
+              onClick={() => { this.setState({ error: null }); window.location.reload(); }}
+              className="mt-4 rounded-2xl bg-rose-500 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-400"
+            >
+              Recarregar
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 type PinStatus = 'pendente' | 'agendado' | 'publicado';
 
@@ -193,7 +220,10 @@ export default function App() {
   }>>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [automationStatus, setAutomationStatus] = useState('');
+  const [runUrl, setRunUrl] = useState('');
   const [dailyLimit, setDailyLimit] = useState(3);
+  const [visibleCount, setVisibleCount] = useState(20);
+  const lsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -207,7 +237,14 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+    if (lsTimerRef.current) clearTimeout(lsTimerRef.current);
+    lsTimerRef.current = setTimeout(() => {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+      } catch {
+        // quota exceeded — ignore, products still live in memory
+      }
+    }, 1000);
   }, [products]);
 
   useEffect(() => {
@@ -462,8 +499,6 @@ export default function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: pinterestEmail,
-          password: pinterestPassword,
           products: productsToPublish.map((product) => ({
             id: product.id,
             title: product.title,
@@ -477,13 +512,16 @@ export default function App() {
 
       const data = await response.json();
       if (data.success) {
-        setAutomationStatus('Postagem automática ativada');
-        const completedIds = data.results?.filter((item: any) => item.success).map((item: any) => item.id) || [];
+        setAutomationStatus(data.message || 'Job iniciado no GitHub Actions');
+        setRunUrl(data.runUrl || '');
         setProducts(refreshedProducts.map((product) =>
-          completedIds.includes(product.id) ? { ...product, status: 'publicado' as PinStatus } : product
+          productsToPublish.find((p) => p.id === product.id)
+            ? { ...product, status: 'agendado' as PinStatus }
+            : product
         ));
       } else {
-        setAutomationStatus(data.message || 'Erro ao ativar automação');
+        setAutomationStatus(data.error || 'Erro ao iniciar job');
+        setRunUrl('');
       }
     } catch (error) {
       console.error('Erro startAutoPosting:', error);
@@ -622,7 +660,7 @@ export default function App() {
       } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
         // Parse Excel
         const arrayBuffer = await file.arrayBuffer();
-        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         const excelData = XLSX.utils.sheet_to_json(worksheet);
@@ -754,6 +792,7 @@ export default function App() {
 
         setProducts((currentProducts) => [...scheduledProducts, ...currentProducts]);
         setUploadedProducts([]);
+        setVisibleCount(20);
         setErrorMessage(`✅ ${validProducts.length} produtos carregados e agendados automaticamente!`);
       } else {
         setErrorMessage(`❌ Nenhum produto válido encontrado. Verifique se o arquivo tem colunas como 'nome' e 'preco' com valores válidos. Produtos parseados: ${parsedProducts.length}`);
@@ -830,6 +869,16 @@ const productLink = product.affiliateLink || product.link;
               <div className="rounded-3xl border border-slate-800/70 bg-slate-950/80 p-4">
                 <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Status Bot</p>
                 <p className="mt-3 text-sm text-slate-300">{automationStatus || 'Aguardando configuração'}</p>
+                {runUrl && (
+                  <a
+                    href={runUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-2 block text-xs text-cyan-400 underline hover:text-cyan-300"
+                  >
+                    Ver progresso no GitHub Actions →
+                  </a>
+                )}
               </div>
             </div>
           </div>
@@ -883,38 +932,12 @@ const productLink = product.affiliateLink || product.link;
                 </div>
               </div>
 
-              <div className="mt-6 space-y-4">
-                <div className="rounded-3xl border border-amber-500/30 bg-amber-500/10 p-4">
-                  <h3 className="text-sm font-semibold text-amber-300">⚠️ Nota sobre Automação</h3>
-                  <p className="mt-2 text-sm text-amber-200">
-                    A automação usa Puppeteer para controlar o navegador. Para funcionar corretamente, execute o projeto localmente com <code className="bg-amber-500/20 px-1 rounded">npm run dev</code> e acesse via localhost. O deploy no Vercel pode ter limitações com Puppeteer.
+              <div className="mt-6">
+                <div className="rounded-3xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+                  <h3 className="text-sm font-semibold text-emerald-300">Como funciona</h3>
+                  <p className="mt-2 text-sm text-emerald-200">
+                    Ao clicar em "Publicar agora", a Vercel dispara um job no GitHub Actions com 7 GB de RAM. O Puppeteer roda no Actions e publica os pins usando as credenciais configuradas nos <strong>GitHub Secrets</strong> (<code className="bg-emerald-500/20 px-1 rounded">PINTEREST_EMAIL</code> e <code className="bg-emerald-500/20 px-1 rounded">PINTEREST_PASSWORD</code>).
                   </p>
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="space-y-2 text-sm text-slate-300">
-                    Email Pinterest
-                    <input
-                      value={pinterestEmail}
-                      onChange={(event) => setPinterestEmail(event.target.value)}
-                      placeholder="seu@email.com"
-                      className="w-full rounded-3xl border border-slate-700/80 bg-slate-950 px-4 py-3 text-slate-100 outline-none transition focus:border-cyan-500"
-                    />
-                  </label>
-                  <label className="space-y-2 text-sm text-slate-300">
-                    Senha Pinterest
-                    <input
-                      type="password"
-                      value={pinterestPassword}
-                      onChange={(event) => setPinterestPassword(event.target.value)}
-                      placeholder="••••••••"
-                      className="w-full rounded-3xl border border-slate-700/80 bg-slate-950 px-4 py-3 text-slate-100 outline-none transition focus:border-cyan-500"
-                    />
-                  </label>
-                </div>
-                <div className="flex gap-3">
-                  <button onClick={initAutomation} className="rounded-3xl bg-slate-700 px-4 py-2 text-sm text-slate-100 transition hover:bg-slate-600">
-                    Inicializar Bot
-                  </button>
                 </div>
               </div>
 
@@ -1256,7 +1279,9 @@ const productLink = product.affiliateLink || product.link;
             {products.length === 0 ? (
               <div className="rounded-3xl border border-dashed border-slate-700/80 bg-slate-950/70 p-6 text-slate-400">Nenhum produto cadastrado ainda.</div>
             ) : (
-              products.map((product) => (
+              <>
+              <p className="text-xs text-slate-500">Mostrando {Math.min(visibleCount, products.length)} de {products.length} produtos</p>
+              {products.slice(0, visibleCount).map((product) => (
                 <article key={product.id} className="grid gap-4 rounded-3xl border border-slate-800/80 bg-slate-950/80 p-5 sm:grid-cols-[0.9fr_0.4fr]">
                   <div className="space-y-3">
                     <div className="flex items-start justify-between gap-3">
@@ -1324,7 +1349,16 @@ const productLink = product.affiliateLink || product.link;
                     </div>
                   </div>
                 </article>
-              ))
+              ))}
+              {visibleCount < products.length && (
+                <button
+                  onClick={() => setVisibleCount((n) => n + 20)}
+                  className="w-full rounded-3xl border border-slate-700/80 py-3 text-sm text-slate-300 transition hover:border-cyan-400 hover:text-cyan-300"
+                >
+                  Mostrar mais ({products.length - visibleCount} restantes)
+                </button>
+              )}
+              </>
             )}
           </div>
         </section>
