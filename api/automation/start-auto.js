@@ -3,10 +3,15 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { products } = req.body;
+  const { products, shopeeUrl, dailyLimit } = req.body;
 
-  if (!products || !Array.isArray(products) || products.length === 0) {
-    return res.status(400).json({ error: 'Lista de produtos é obrigatória' });
+  const hasProducts = Array.isArray(products) && products.length > 0;
+  const hasShopeeUrl = typeof shopeeUrl === 'string' && shopeeUrl.includes('shopee.com.br');
+
+  if (!hasProducts && !hasShopeeUrl) {
+    return res.status(400).json({
+      error: 'Forneça uma URL do Shopee ou uma lista de produtos.',
+    });
   }
 
   const pat = process.env.GITHUB_PAT;
@@ -19,6 +24,13 @@ export default async function handler(req, res) {
     });
   }
 
+  const inputs = {
+    daily_limit: String(dailyLimit || 5),
+  };
+
+  if (hasShopeeUrl) inputs.shopee_url = shopeeUrl;
+  if (hasProducts) inputs.products_json = JSON.stringify(products);
+
   const dispatchRes = await fetch(
     `https://api.github.com/repos/${repo}/actions/workflows/pinterest-automation.yml/dispatches`,
     {
@@ -29,10 +41,7 @@ export default async function handler(req, res) {
         'X-GitHub-Api-Version': '2022-11-28',
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        ref,
-        inputs: { products_json: JSON.stringify(products) },
-      }),
+      body: JSON.stringify({ ref, inputs }),
     }
   );
 
@@ -41,7 +50,6 @@ export default async function handler(req, res) {
     return res.status(500).json({ success: false, error: `GitHub API: ${dispatchRes.status} — ${text}` });
   }
 
-  // Aguarda o run aparecer na API (pode demorar ~2s)
   await new Promise((r) => setTimeout(r, 3000));
 
   const runsRes = await fetch(
@@ -57,10 +65,14 @@ export default async function handler(req, res) {
   const runsData = await runsRes.json();
   const latestRun = runsData.workflow_runs?.[0];
 
+  const label = hasShopeeUrl
+    ? `Buscando produtos em ${shopeeUrl} e publicando...`
+    : `Job iniciado para ${products.length} pin(s)`;
+
   return res.status(200).json({
     success: true,
     runId: latestRun?.id,
     runUrl: latestRun?.html_url,
-    message: `Job iniciado para ${products.length} pin(s)`,
+    message: label,
   });
 }

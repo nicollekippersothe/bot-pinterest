@@ -223,6 +223,7 @@ export default function App() {
   const [runUrl, setRunUrl] = useState('');
   const [dailyLimit, setDailyLimit] = useState(3);
   const [visibleCount, setVisibleCount] = useState(20);
+  const [shopeeSearchUrl, setShopeeSearchUrl] = useState('');
   const lsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -472,13 +473,33 @@ export default function App() {
     }
   };
 
+  const publishFromShopeeUrl = async () => {
+    if (!shopeeSearchUrl.includes('shopee.com.br')) {
+      setAutomationStatus('Cole uma URL válida do Shopee (busca ou categoria).');
+      return;
+    }
+    setAutomationStatus('Disparando automação — o GitHub Actions vai buscar os produtos e publicar no Pinterest...');
+    setRunUrl('');
+    try {
+      const response = await fetch(`${BACKEND_URL}/automation/start-auto`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shopeeUrl: shopeeSearchUrl, dailyLimit }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setAutomationStatus(data.message || 'Job iniciado');
+        setRunUrl(data.runUrl || '');
+      } else {
+        setAutomationStatus(data.error || 'Erro ao iniciar job');
+      }
+    } catch {
+      setAutomationStatus('Erro de conexão ao disparar automação');
+    }
+  };
+
   const startAutoPosting = async () => {
     try {
-      if (!pinterestEmail || !pinterestPassword) {
-        setAutomationStatus('Informe email e senha do Pinterest antes de iniciar.');
-        return;
-      }
-
       const refreshedProducts = refreshScheduledProductsForToday(products);
       setProducts(refreshedProducts);
 
@@ -489,11 +510,7 @@ export default function App() {
       }
 
       const productsToPublish = pendingProducts.slice(0, dailyLimit);
-      if (pendingProducts.length > dailyLimit) {
-        setAutomationStatus(`Limite diário de ${dailyLimit} posts. Serão enviados apenas ${productsToPublish.length} hoje.`);
-      } else {
-        setAutomationStatus('Publicando agora...');
-      }
+      setAutomationStatus('Publicando agora...');
 
       const response = await fetch(`${BACKEND_URL}/automation/start-auto`, {
         method: 'POST',
@@ -507,6 +524,7 @@ export default function App() {
             link: product.affiliateLink || product.productLink,
             hashtags: product.hashtags,
           })),
+          dailyLimit,
         }),
       });
 
@@ -932,11 +950,31 @@ const productLink = product.affiliateLink || product.link;
                 </div>
               </div>
 
-              <div className="mt-6">
+              <div className="mt-6 space-y-4">
+                <div className="rounded-3xl border border-cyan-500/30 bg-cyan-500/5 p-4">
+                  <h3 className="text-sm font-semibold text-cyan-300">Publicar direto do Shopee</h3>
+                  <p className="mt-1 text-xs text-cyan-200/70 mb-3">Cole uma URL de busca ou categoria do Shopee — o bot busca os produtos e publica automaticamente no Pinterest.</p>
+                  <div className="flex gap-2">
+                    <input
+                      value={shopeeSearchUrl}
+                      onChange={(e) => setShopeeSearchUrl(e.target.value)}
+                      placeholder="https://shopee.com.br/list/Cozinha"
+                      className="flex-1 rounded-2xl border border-slate-700/80 bg-slate-950 px-4 py-2 text-sm text-slate-100 outline-none transition focus:border-cyan-500"
+                    />
+                    <button
+                      onClick={publishFromShopeeUrl}
+                      disabled={!shopeeSearchUrl.includes('shopee.com.br')}
+                      className="rounded-2xl bg-cyan-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:opacity-40"
+                    >
+                      Publicar
+                    </button>
+                  </div>
+                </div>
+
                 <div className="rounded-3xl border border-emerald-500/30 bg-emerald-500/10 p-4">
                   <h3 className="text-sm font-semibold text-emerald-300">Como funciona</h3>
                   <p className="mt-2 text-sm text-emerald-200">
-                    Ao clicar em "Publicar agora", a Vercel dispara um job no GitHub Actions com 7 GB de RAM. O Puppeteer roda no Actions e publica os pins usando as credenciais configuradas nos <strong>GitHub Secrets</strong> (<code className="bg-emerald-500/20 px-1 rounded">PINTEREST_EMAIL</code> e <code className="bg-emerald-500/20 px-1 rounded">PINTEREST_PASSWORD</code>).
+                    O GitHub Actions abre o Shopee, coleta os produtos com seu link de afiliado, gera os pins e publica no Pinterest — tudo automático. Você acompanha em tempo real pelo link que aparece no Status Bot.
                   </p>
                 </div>
               </div>

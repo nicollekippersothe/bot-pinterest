@@ -4,8 +4,17 @@ on:
   workflow_dispatch:
     inputs:
       products_json:
-        description: 'JSON array de produtos para publicar'
-        required: true
+        description: 'JSON array de produtos para publicar (opcional se shopee_url for fornecida)'
+        required: false
+        type: string
+      shopee_url:
+        description: 'URL de busca ou categoria do Shopee para buscar produtos automaticamente'
+        required: false
+        type: string
+      daily_limit:
+        description: 'Limite de pins por execução'
+        required: false
+        default: '5'
         type: string
 
 jobs:
@@ -35,4 +44,7 @@ jobs:
           PINTEREST_EMAIL: ${{ secrets.PINTEREST_EMAIL }}
           PINTEREST_PASSWORD: ${{ secrets.PINTEREST_PASSWORD }}
           PRODUCTS_JSON: ${{ inputs.products_json }}
+          SHOPEE_URL: ${{ inputs.shopee_url }}
+          DAILY_LIMIT: ${{ inputs.daily_limit }}
           CHROMIUM_PATH: /usr/bin/chromium-browser
+          AFFILIATE_ID: ${{ secrets.AFFILIATE_ID }}
