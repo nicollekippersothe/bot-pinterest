@@ -17,6 +17,12 @@ export interface OfferRow {
   sold: number | null;
   category: string | null;
   status: OfferStatus;
+  pin_title: string | null;
+  pin_description: string | null;
+  /** Array de hashtags serializado em JSON. */
+  hashtags: string | null;
+  telegram_caption: string | null;
+  copy_source: string | null;
   pin_image_path: string | null;
   pinterest_url: string | null;
   telegram_message_id: string | null;
@@ -120,7 +126,17 @@ export function listRecent(limit = 20): OfferRow[] {
 type OfferUpdate = Partial<
   Pick<
     OfferRow,
-    'status' | 'pin_image_path' | 'pinterest_url' | 'telegram_message_id' | 'error' | 'posted_at'
+    | 'status'
+    | 'pin_title'
+    | 'pin_description'
+    | 'hashtags'
+    | 'telegram_caption'
+    | 'copy_source'
+    | 'pin_image_path'
+    | 'pinterest_url'
+    | 'telegram_message_id'
+    | 'error'
+    | 'posted_at'
   >
 >;
 

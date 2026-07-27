@@ -4,6 +4,7 @@ import { closeDb } from './database/db.js';
 import { countByStatus, listByStatus } from './database/offers.js';
 import { OFFER_STATUS } from './database/schema.js';
 import { mineAndStore } from './miner/index.js';
+import { processPending } from './processor/index.js';
 import { logger } from './utils/logger.js';
 
 /**
@@ -27,11 +28,15 @@ export async function runPipeline(): Promise<void> {
     }
   }
 
-  const pending = listByStatus(OFFER_STATUS.PENDING);
-  logger.info(`Fila de processamento: ${pending.length} oferta(s) pendente(s).`);
+  const processed = await processPending(config.miner.limit);
+  for (const item of processed) {
+    logger.info(`✎ ${item.copy.pinTitle} — ${item.copy.hashtags.join(' ')}`);
+  }
+
+  const ready = listByStatus(OFFER_STATUS.PROCESSED);
+  logger.info(`Prontas para publicação: ${ready.length} oferta(s).`);
   logger.debug('Totais por status:', countByStatus());
 
-  // TODO Fase 3: gerar copy com Claude e o pin 1000x1500 com sharp.
   // TODO Fase 4: publicar no Pinterest via Playwright (sessão persistente).
   // TODO Fase 5: publicar no Telegram e marcar as ofertas como postadas.
 

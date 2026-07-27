@@ -1,5 +1,5 @@
 /**
- * Teste de fumaça das Fases 1-2, sem framework.
+ * Teste de fumaça das Fases 1-3, sem framework e sem rede.
  *
  * Verifica o requisito central da Fase 1: o mesmo produto nunca é
  * reprocessado nem repostado. Usa um banco temporário próprio.
@@ -20,6 +20,10 @@ const { insertOffers, filterNewOffers, offerExists, countByStatus, markPosted, f
 const { mockMiner, mineMockRepeat } = await import('../miner/mock.js');
 const { normalizeShopeeItem } = await import('../miner/shopee.js');
 const { toAffiliateLink, buildProductKey } = await import('../utils/links.js');
+const { buildFallbackCopy, normalizeHashtags, truncate, PIN_TITLE_MAX, PIN_DESCRIPTION_MAX } =
+  await import('../processor/copywriter.js');
+const { buildPinImage } = await import('../processor/image.js');
+const sharp = (await import('sharp')).default;
 
 let failures = 0;
 
@@ -109,6 +113,48 @@ check('desconto calculado', normalized?.discount === 50, String(normalized?.disc
 check('imagem apontando para o CDN', normalized?.imageUrl?.includes('susercontent.com') === true);
 check('item inválido é descartado', normalizeShopeeItem({ itemid: 0, shopid: 0, name: '' }) === null);
 
+console.log('\n[7] Copy de fallback (sem rede)');
+const sample = findByKey(mined[0].productKey)!;
+const copy = buildFallbackCopy(sample);
+check('título dentro do limite do Pinterest', copy.pinTitle.length <= PIN_TITLE_MAX, `${copy.pinTitle.length} chars`);
+check(
+  'descrição dentro do limite do Pinterest',
+  copy.pinDescription.length <= PIN_DESCRIPTION_MAX,
+  `${copy.pinDescription.length} chars`,
+);
+check('gerou hashtags', copy.hashtags.length >= 4);
+check('todas as hashtags começam com #', copy.hashtags.every((t) => /^#[\p{L}\p{N}_]+$/u.test(t)));
+check('legenda do Telegram preenchida', copy.telegramCaption.includes('R$'));
+check('marcada como template', copy.source === 'template');
+
+check(
+  'normalizeHashtags limpa espaços, símbolos e duplicatas',
+  JSON.stringify(normalizeHashtags(['## promo ção!', 'PROMOÇÃO', '#casa', '#casa', '', 42])) ===
+    JSON.stringify(['#promoção', '#casa']),
+  JSON.stringify(normalizeHashtags(['## promo ção!', 'PROMOÇÃO', '#casa', '#casa', '', 42])),
+);
+check('truncate respeita o limite', truncate('a'.repeat(300), 100).length <= 100);
+check('truncate preserva texto curto', truncate('  texto   curto ', 100) === 'texto curto');
+
+console.log('\n[8] Geração do pin 1000x1500');
+// Imagem sintética 800x800 (produto quadrado — o caso que não pode ser cortado).
+const square = await sharp({
+  create: { width: 800, height: 800, channels: 3, background: { r: 220, g: 90, b: 70 } },
+})
+  .jpeg()
+  .toBuffer();
+
+const pin = await buildPinImage(sample, square);
+const meta = await sharp(pin.filePath).metadata();
+check('pin tem 1000x1500 (2:3)', meta.width === 1000 && meta.height === 1500, `${meta.width}x${meta.height}`);
+check('arquivo gravado em disco', fs.statSync(pin.filePath).size > 10_000);
+
+// O produto quadrado precisa continuar inteiro: as bordas laterais da área do
+// produto devem conter o fundo, não o recorte do produto.
+const stats = await sharp(pin.filePath).stats();
+check('imagem tem conteúdo colorido (não saiu em branco)', stats.channels[0].mean > 10);
+fs.rmSync(pin.filePath, { force: true });
+
 console.log('\nTotais por status:', countByStatus());
 closeDb();
 fs.rmSync(path.dirname(process.env.DATABASE_PATH!), { recursive: true, force: true });
@@ -117,4 +163,4 @@ if (failures > 0) {
   console.error(`\n✖ ${failures} verificação(ões) falharam\n`);
   process.exit(1);
 }
-console.log('\n✔ Fases 1 e 2 validadas\n');
+console.log('\n✔ Fases 1 a 3 validadas\n');

@@ -20,6 +20,11 @@ CREATE TABLE IF NOT EXISTS offers (
   sold           INTEGER,
   category       TEXT,
   status         TEXT    NOT NULL DEFAULT 'pending',
+  pin_title      TEXT,
+  pin_description TEXT,
+  hashtags       TEXT,
+  telegram_caption TEXT,
+  copy_source    TEXT,
   pin_image_path TEXT,
   pinterest_url  TEXT,
   telegram_message_id TEXT,
@@ -33,6 +38,18 @@ CREATE INDEX IF NOT EXISTS idx_offers_status   ON offers (status);
 CREATE INDEX IF NOT EXISTS idx_offers_platform ON offers (platform);
 CREATE INDEX IF NOT EXISTS idx_offers_posted   ON offers (posted_at);
 `;
+
+/**
+ * Colunas adicionadas depois da Fase 1. Como `CREATE TABLE IF NOT EXISTS` não
+ * altera tabelas existentes, elas são aplicadas na conexão via ALTER TABLE.
+ */
+export const OFFER_COLUMNS: { name: string; definition: string }[] = [
+  { name: 'pin_title', definition: 'TEXT' },
+  { name: 'pin_description', definition: 'TEXT' },
+  { name: 'hashtags', definition: 'TEXT' },
+  { name: 'telegram_caption', definition: 'TEXT' },
+  { name: 'copy_source', definition: 'TEXT' },
+];
 
 /** Estados possíveis de uma oferta ao longo do pipeline. */
 export const OFFER_STATUS = {
