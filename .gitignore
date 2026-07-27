@@ -1,2 +1,11 @@
 node_modules
 .vercel
+
+# Engine de afiliados
+.env
+engine/dist
+storage/*
+!storage/.gitkeep
+*.db
+*.db-shm
+*.db-wal
