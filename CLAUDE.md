@@ -30,8 +30,8 @@ A engine descrita aqui vive em `engine/`, isolada do app existente:
 | IA & LLM | `@anthropic-ai/sdk` (copy, SEO, hashtags) | ✅ Fase 3 |
 | Imagem | `sharp` (pin 1000x1500) | ✅ Fase 3 |
 | Pinterest | Playwright com sessão persistente | ⏳ Fase 4 |
-| Telegram | `node-telegram-bot-api` | ⏳ Fase 5 |
-| Agendamento | `node-cron` | ⏳ Fase 5 |
+| Telegram | Bot API via `fetch` (sem dependência) | ✅ Fase 5 |
+| Agendamento | `node-cron` | ✅ Fase 5 |
 
 ## 📁 Estrutura
 
@@ -42,10 +42,10 @@ engine/
 │   ├── database/         # db.ts, schema.ts, offers.ts         ✅
 │   ├── miner/            # types, mock, shopee, index          ✅
 │   ├── processor/        # copywriter.ts + image.ts            ✅
-│   ├── publisher/        # pinterest.ts + telegram.ts          ⏳ Fases 4-5
-│   ├── scripts/smoke.ts  # teste de fumaça das Fases 1-3       ✅
+│   ├── publisher/        # telegram.ts ✅ | pinterest.ts ⏳ Fase 4
+│   ├── scripts/           # smoke.ts + telegram-check.ts       ✅
 │   ├── utils/            # logger.ts, links.ts                 ✅
-│   └── index.ts          # orquestrador / cron job             ✅ (fases 1-3)
+│   └── index.ts          # orquestrador + node-cron             ✅
 └── tsconfig.json
 storage/                  # banco, imagens geradas e sessão do Playwright (git-ignored)
 .env.example
@@ -55,7 +55,10 @@ storage/                  # banco, imagens geradas e sessão do Playwright (git-
 
 ```bash
 npm run engine        # roda o pipeline uma vez (tsx)
-npm run engine:test   # teste de fumaça das Fases 1-3 (sem rede)
+npm run engine:test   # teste de fumaça das Fases 1-3 e 5 (sem rede)
+npm run engine:cron   # modo agendado (CRON_SCHEDULE), processo longo
+npm run engine:telegram        # valida token/canal e mostra prévia do post
+npm run engine:telegram -- --send  # envia um post de teste ao canal
 npm run engine:build  # compila para engine/dist
 npm run engine:start  # roda o build compilado
 
@@ -120,10 +123,21 @@ Primeiro acesso em modo headful para login, salvando sessão em
 `storage/pinterest_state.json`; execuções seguintes em headless reutilizando os cookies.
 Fluxo: pin-builder → upload da imagem → título/descrição/link → board → publicar.
 
-### ⏳ Fase 5 — Publisher Telegram & Orquestrador
+### ✅ Fase 5 — Publisher Telegram & Orquestrador
 
-Envio da foto com copy e botão de compra no canal; orquestração completa
-(mineração → IA/design → Pinterest → Telegram → registro no SQLite) com `node-cron`.
+`publisher/telegram.ts` envia o pin com `sendPhoto` (Bot API via `fetch`, sem
+dependência extra), legenda em HTML e **botão inline** com o link de afiliado —
+o botão converte melhor que link solto na legenda.
+
+- O bot precisa ser **administrador do canal**; `TELEGRAM_CHANNEL_ID` é o @ do canal.
+- A legenda é montada pelo publisher: chamada da IA + preço/desconto + hashtags.
+  A copy não repete preço nem link (respeita o limite de 1024 do Telegram).
+- `PUBLISH_BATCH_SIZE` (padrão 3) e 5s entre posts mantêm cadência conservadora.
+- `npm run engine:cron` roda o pipeline no `CRON_SCHEDULE` e evita sobreposição
+  de ciclos.
+
+Uma oferta vira `posted` após o Telegram; quando a Fase 4 entrar, os dois canais
+publicam antes da marcação.
 
 ## ⚠️ Notas operacionais
 

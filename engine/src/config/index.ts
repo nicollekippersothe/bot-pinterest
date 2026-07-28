@@ -56,6 +56,9 @@ export const config = {
   /** ID de afiliado Shopee usado para montar os links de saída. */
   shopeeAffiliateId: process.env.SHOPEE_AFFILIATE_ID ?? 'an_18393280814',
 
+  /** Quantas ofertas publicar por ciclo — cadência conservadora evita bloqueio. */
+  publishBatchSize: asInt(process.env.PUBLISH_BATCH_SIZE, 3),
+
   cronSchedule: process.env.CRON_SCHEDULE ?? '0 */2 * * *',
   logLevel: process.env.LOG_LEVEL ?? 'info',
 } as const;

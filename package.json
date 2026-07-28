@@ -13,6 +13,8 @@
     "engine": "tsx engine/src/index.ts",
     "engine:build": "tsc -p engine/tsconfig.json",
     "engine:start": "node engine/dist/index.js",
+    "engine:cron": "tsx engine/src/index.ts --cron",
+    "engine:telegram": "tsx engine/src/scripts/telegram-check.ts",
     "engine:test": "tsx engine/src/scripts/smoke.ts"
   },
   "dependencies": {
@@ -22,6 +24,7 @@
     "better-sqlite3": "^11.10.0",
     "cheerio": "^1.0.0-rc.12",
     "dotenv": "^16.6.1",
+    "node-cron": "^4.6.0",
     "puppeteer-core": "^23.0.0",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2",

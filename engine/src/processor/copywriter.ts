@@ -39,7 +39,7 @@ const COPY_SCHEMA = {
     telegramCaption: {
       type: 'string',
       description:
-        'Legenda curta para canal de achadinhos no Telegram, com emojis, preço e chamada para ação. Máximo 700 caracteres. Não inclua o link.',
+        'Chamada curta para canal de achadinhos no Telegram, com emojis e call to action. Máximo 400 caracteres. NÃO inclua preço nem link: o bot adiciona o bloco de preço e o botão de compra automaticamente.',
     },
   },
   required: ['pinTitle', 'pinDescription', 'hashtags', 'telegramCaption'],
@@ -150,10 +150,9 @@ export function buildFallbackCopy(offer: OfferRow): GeneratedCopy {
     '#economia',
   ]);
 
+  // Sem preço e sem link: o publisher monta o bloco de preço e o botão de compra.
   const telegramCaption = [
     `🔥 ${discountTag} — ${offer.title}`,
-    '',
-    offer.original_price ? `De ~${formatBRL(offer.original_price)}~ por *${price}*` : `Por *${price}*`,
     '',
     '🛒 Corre que o preço pode mudar a qualquer momento!',
   ].join('\n');

@@ -15,7 +15,7 @@ process.env.DATABASE_PATH = path.join(
 process.env.LOG_LEVEL = 'warn';
 
 const { getDb, closeDb } = await import('../database/db.js');
-const { insertOffers, filterNewOffers, offerExists, countByStatus, markPosted, findByKey } =
+const { insertOffers, filterNewOffers, offerExists, countByStatus, markPosted, findByKey, updateOffer } =
   await import('../database/offers.js');
 const { mockMiner, mineMockRepeat } = await import('../miner/mock.js');
 const { normalizeShopeeItem } = await import('../miner/shopee.js');
@@ -23,6 +23,8 @@ const { toAffiliateLink, buildProductKey } = await import('../utils/links.js');
 const { buildFallbackCopy, normalizeHashtags, truncate, PIN_TITLE_MAX, PIN_DESCRIPTION_MAX } =
   await import('../processor/copywriter.js');
 const { buildPinImage } = await import('../processor/image.js');
+const { buildCaption } = await import('../publisher/index.js');
+const { parseHashtags } = await import('../publisher/telegram.js');
 const sharp = (await import('sharp')).default;
 
 let failures = 0;
@@ -124,7 +126,11 @@ check(
 );
 check('gerou hashtags', copy.hashtags.length >= 4);
 check('todas as hashtags começam com #', copy.hashtags.every((t) => /^#[\p{L}\p{N}_]+$/u.test(t)));
-check('legenda do Telegram preenchida', copy.telegramCaption.includes('R$'));
+check('legenda do Telegram preenchida', copy.telegramCaption.length > 20);
+check(
+  'legenda do Telegram não repete preço nem link (o publisher adiciona)',
+  !copy.telegramCaption.includes('R$') && !copy.telegramCaption.includes('http'),
+);
 check('marcada como template', copy.source === 'template');
 
 check(
@@ -154,6 +160,18 @@ check('arquivo gravado em disco', fs.statSync(pin.filePath).size > 10_000);
 const stats = await sharp(pin.filePath).stats();
 check('imagem tem conteúdo colorido (não saiu em branco)', stats.channels[0].mean > 10);
 fs.rmSync(pin.filePath, { force: true });
+
+console.log('\n[9] Legenda do Telegram');
+updateOffer(sample.id, {
+  telegram_caption: '🔥 Achado <top> & barato',
+  hashtags: JSON.stringify(['#achadinhos', '#promocao']),
+});
+const caption = buildCaption(findByKey(sample.product_key)!);
+check('escapa HTML da copy', caption.includes('&lt;top&gt;') && caption.includes('&amp;'));
+check('inclui preço em negrito', caption.includes('<b>R$'));
+check('inclui hashtags', caption.includes('#achadinhos'));
+check('respeita o limite de 1024 caracteres', caption.length <= 1024, `${caption.length} chars`);
+check('parseHashtags tolera JSON inválido', parseHashtags('nao-e-json').length === 0);
 
 console.log('\nTotais por status:', countByStatus());
 closeDb();
