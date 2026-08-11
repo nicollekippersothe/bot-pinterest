@@ -25,6 +25,8 @@ export interface OfferRow {
   hashtags: string | null;
   telegram_caption: string | null;
   copy_source: string | null;
+  /** Quando a oferta entrou no feed público do Pinterest. */
+  feed_at: string | null;
   pin_image_path: string | null;
   pinterest_url: string | null;
   telegram_message_id: string | null;
@@ -138,6 +140,7 @@ type OfferUpdate = Partial<
     | 'hashtags'
     | 'telegram_caption'
     | 'copy_source'
+    | 'feed_at'
     | 'pin_image_path'
     | 'pinterest_url'
     | 'telegram_message_id'

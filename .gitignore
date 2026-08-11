@@ -9,3 +9,7 @@ storage/*
 *.db
 *.db-shm
 *.db-wal
+
+# Pins gerados: publicados via deploy, não versionados por padrão
+public/pins/
+public/feed.json

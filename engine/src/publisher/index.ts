@@ -59,3 +59,4 @@ export {
   checkTelegramAccess,
   buildCaption,
 } from './telegram.js';
+export { publishFeed, readFeed, type FeedItem } from './feed.js';

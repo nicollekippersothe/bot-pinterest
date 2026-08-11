@@ -19,6 +19,9 @@ export const PINTEREST_STATE_PATH = path.join(STORAGE_DIR, 'pinterest_state.json
 /** CSVs exportados do painel de afiliados ("Obter Link em Massa"). */
 export const PANEL_LINKS_DIR = path.join(STORAGE_DIR, 'links');
 export const DATAFEED_PATH = path.join(STORAGE_DIR, 'datafeed.csv');
+/** `public/` é copiado para `dist/` pelo Vite e servido pela Vercel. */
+export const PUBLIC_DIR = path.join(ROOT_DIR, 'public');
+export const PUBLIC_PINS_DIR = path.join(PUBLIC_DIR, 'pins');
 
 /**
  * Fonte de mineração:
@@ -74,6 +77,9 @@ export const config = {
     : DATAFEED_PATH,
   /** URL tokenizada do datafeed — é CREDENCIAL, mantenha fora do repositório. */
   datafeedUrl: process.env.SHOPEE_DATAFEED_URL ?? '',
+
+  /** Domínio público onde os pins ficam acessíveis (deploy da Vercel). */
+  publicBaseUrl: (process.env.PUBLIC_BASE_URL ?? '').replace(/\/+$/, ''),
 
   /** Quantas ofertas publicar por ciclo — cadência conservadora evita bloqueio. */
   publishBatchSize: asInt(process.env.PUBLISH_BATCH_SIZE, 3),

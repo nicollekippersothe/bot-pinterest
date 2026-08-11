@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS offers (
   hashtags       TEXT,
   telegram_caption TEXT,
   copy_source    TEXT,
+  feed_at        TEXT,
   pin_image_path TEXT,
   pinterest_url  TEXT,
   telegram_message_id TEXT,
@@ -53,6 +54,7 @@ export const OFFER_COLUMNS: { name: string; definition: string }[] = [
   { name: 'copy_source', definition: 'TEXT' },
   { name: 'commission_rate', definition: 'REAL' },
   { name: 'shop_name', definition: 'TEXT' },
+  { name: 'feed_at', definition: 'TEXT' },
 ];
 
 /** Estados possíveis de uma oferta ao longo do pipeline. */
