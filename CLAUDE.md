@@ -117,11 +117,27 @@ resolução e link de afiliado, tudo normalizado no contrato `MinedOffer`.
 A faixa de preço usa SVG com `DejaVu Sans` e alternativas; em uma máquina sem
 fontes instaladas o texto não renderiza — instale `fonts-dejavu-core`.
 
-### ⏳ Fase 4 — Publisher Pinterest (Playwright)
+### ⏳ Fase 4 — Publisher Pinterest
 
-Primeiro acesso em modo headful para login, salvando sessão em
-`storage/pinterest_state.json`; execuções seguintes em headless reutilizando os cookies.
-Fluxo: pin-builder → upload da imagem → título/descrição/link → board → publicar.
+**Decisão: usar a API oficial via Make, não Playwright.** A automação de login com
+credenciais contraria os termos de uso e arrisca a conta; o Make usa a API oficial
+e já foi validado ponta a ponta (pin criado com sucesso em 2026-08-11).
+
+Achados do teste real, que valem para qualquer implementação:
+
+- **A imagem NÃO pode estar em `pinimg.com`/`pinterest.com`.** A API recusa com
+  `400 {"code":2787,"message":"Sorry! Something went wrong on our end."}` — mensagem
+  genérica que esconde erro de validação. Como é 400 e não 5xx, repetir não resolve.
+- Imagem do CDN da Shopee (`cf.shopee.com.br/file/...`) funciona.
+- Quem baixa a imagem é o servidor do Pinterest: a URL precisa ser pública e servir
+  o binário direto (link do Google Drive não serve — devolve HTML).
+- A URL longa de afiliado, com todos os parâmetros de rastreio, é aceita no campo
+  de destino.
+
+Pendência: os pins gerados pelo `processor/image.ts` (1000x1500 com faixa de preço)
+ficam em `storage/images/` na máquina local. Para o Pinterest consumi-los é preciso
+hospedagem pública. Usar a imagem crua da Shopee funciona, mas ela é quadrada (1:1)
+e perde a faixa de preço — que é justamente o que faz o pin converter.
 
 ### ✅ Fase 5 — Publisher Telegram & Orquestrador
 
