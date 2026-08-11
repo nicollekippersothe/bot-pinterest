@@ -3,12 +3,24 @@ import { config } from '../config/index.js';
 
 /**
  * Extrai `shopid` e `itemid` de uma URL de produto da Shopee.
- * Formato esperado: https://shopee.com.br/<slug>-i.<shopid>.<itemid>
+ *
+ * Dois formatos convivem e precisam gerar a MESMA chave, senão a
+ * deduplicação falha entre fontes diferentes:
+ * - `https://shopee.com.br/<slug>-i.<shopid>.<itemid>` (busca/site)
+ * - `https://shopee.com.br/product/<shopid>/<itemid>`  (painel de afiliados)
  */
 export function parseShopeeUrl(url: string): { shopId: string; itemId: string; slug: string } | null {
-  const match = url.match(/\/(?:([^/?#]*?)-)?i\.(\d+)\.(\d+)/);
-  if (!match) return null;
-  return { slug: match[1] ?? 'produto', shopId: match[2], itemId: match[3] };
+  const slugFormat = url.match(/\/(?:([^/?#]*?)-)?i\.(\d+)\.(\d+)/);
+  if (slugFormat) {
+    return { slug: slugFormat[1] || 'produto', shopId: slugFormat[2], itemId: slugFormat[3] };
+  }
+
+  const productFormat = url.match(/\/product\/(\d+)\/(\d+)/);
+  if (productFormat) {
+    return { slug: 'produto', shopId: productFormat[1], itemId: productFormat[2] };
+  }
+
+  return null;
 }
 
 /** Monta o link de afiliado Shopee a partir de shopid/itemid. */

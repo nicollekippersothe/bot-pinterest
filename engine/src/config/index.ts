@@ -16,9 +16,17 @@ export const DB_PATH = process.env.DATABASE_PATH
   ? path.resolve(ROOT_DIR, process.env.DATABASE_PATH)
   : path.join(STORAGE_DIR, 'affiliate.db');
 export const PINTEREST_STATE_PATH = path.join(STORAGE_DIR, 'pinterest_state.json');
+/** CSVs exportados do painel de afiliados ("Obter Link em Massa"). */
+export const PANEL_LINKS_DIR = path.join(STORAGE_DIR, 'links');
+export const DATAFEED_PATH = path.join(STORAGE_DIR, 'datafeed.csv');
 
-/** Fonte de mineração: `mock` gera payload simulado, `shopee` tenta a busca real. */
-export type MinerSource = 'mock' | 'shopee';
+/**
+ * Fonte de mineração:
+ * - `panel`  — CSVs do painel de afiliados (ÚNICA com link que gera comissão)
+ * - `mock`   — payload simulado, sem rede
+ * - `shopee` — busca pública; links NÃO rastreiam comissão
+ */
+export type MinerSource = 'mock' | 'shopee' | 'panel';
 
 function asInt(value: string | undefined, fallback: number): number {
   const parsed = Number.parseInt(value ?? '', 10);
@@ -53,8 +61,19 @@ export const config = {
     minDiscount: asInt(process.env.MINER_MIN_DISCOUNT, 10),
   },
 
-  /** ID de afiliado Shopee usado para montar os links de saída. */
+  /** ID de afiliado Shopee (usado só pela fonte `shopee`, que não rastreia). */
   shopeeAffiliateId: process.env.SHOPEE_AFFILIATE_ID ?? 'an_18393280814',
+
+  /** Pasta com os CSVs exportados do painel de afiliados. */
+  panelLinksDir: process.env.PANEL_LINKS_DIR
+    ? path.resolve(ROOT_DIR, process.env.PANEL_LINKS_DIR)
+    : PANEL_LINKS_DIR,
+  /** Cópia local do datafeed, usada só para enriquecer (imagem, desconto). */
+  datafeedPath: process.env.DATAFEED_PATH
+    ? path.resolve(ROOT_DIR, process.env.DATAFEED_PATH)
+    : DATAFEED_PATH,
+  /** URL tokenizada do datafeed — é CREDENCIAL, mantenha fora do repositório. */
+  datafeedUrl: process.env.SHOPEE_DATAFEED_URL ?? '',
 
   /** Quantas ofertas publicar por ciclo — cadência conservadora evita bloqueio. */
   publishBatchSize: asInt(process.env.PUBLISH_BATCH_SIZE, 3),

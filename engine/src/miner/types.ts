@@ -21,6 +21,11 @@ export interface MinedOffer {
   rating?: number | null;
   sold?: number | null;
   category?: string | null;
+  /** Taxa de comissão em % (vem do painel de afiliados). */
+  commissionRate?: number | null;
+  /** Comissão estimada em reais, informada pelo painel. */
+  commissionValue?: number | null;
+  shopName?: string | null;
 }
 
 export interface MinerOptions {

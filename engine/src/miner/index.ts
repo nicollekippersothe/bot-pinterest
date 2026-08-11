@@ -3,11 +3,13 @@ import { logger } from '../utils/logger.js';
 import { filterNewOffers, insertOffers, type OfferRow } from '../database/offers.js';
 import { mockMiner } from './mock.js';
 import { shopeeMiner } from './shopee.js';
+import { panelMiner } from './panel.js';
 import type { Miner, MinedOffer, MinerOptions } from './types.js';
 
 const MINERS: Record<MinerSource, Miner> = {
   mock: mockMiner,
   shopee: shopeeMiner,
+  panel: panelMiner,
 };
 
 export function getMiner(source: MinerSource = config.miner.source): Miner {
@@ -50,5 +52,7 @@ export async function mineAndStore(options: MinerOptions = {}): Promise<MineResu
   return { mined, inserted, duplicates: mined.length - inserted.length };
 }
 
-export { mockMiner, shopeeMiner };
+export { mockMiner, shopeeMiner, panelMiner };
+export { loadPanelOffers, parsePanelCsv } from './panel.js';
+export { enrichFromDatafeed, downloadDatafeed } from './datafeed.js';
 export type { Miner, MinedOffer, MinerOptions };

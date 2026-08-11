@@ -19,6 +19,8 @@ CREATE TABLE IF NOT EXISTS offers (
   rating         REAL,
   sold           INTEGER,
   category       TEXT,
+  commission_rate REAL,
+  shop_name      TEXT,
   status         TEXT    NOT NULL DEFAULT 'pending',
   pin_title      TEXT,
   pin_description TEXT,
@@ -49,6 +51,8 @@ export const OFFER_COLUMNS: { name: string; definition: string }[] = [
   { name: 'hashtags', definition: 'TEXT' },
   { name: 'telegram_caption', definition: 'TEXT' },
   { name: 'copy_source', definition: 'TEXT' },
+  { name: 'commission_rate', definition: 'REAL' },
+  { name: 'shop_name', definition: 'TEXT' },
 ];
 
 /** Estados possíveis de uma oferta ao longo do pipeline. */

@@ -16,6 +16,8 @@ export interface OfferRow {
   rating: number | null;
   sold: number | null;
   category: string | null;
+  commission_rate: number | null;
+  shop_name: string | null;
   status: OfferStatus;
   pin_title: string | null;
   pin_description: string | null;
@@ -59,10 +61,12 @@ export function insertOffer(offer: MinedOffer): OfferRow | null {
     .prepare(
       `INSERT OR IGNORE INTO offers
          (product_key, platform, title, original_url, affiliate_url, image_url,
-          price, original_price, discount, rating, sold, category, status)
+          price, original_price, discount, rating, sold, category,
+          commission_rate, shop_name, status)
        VALUES
          (@productKey, @platform, @title, @originalUrl, @affiliateUrl, @imageUrl,
-          @price, @originalPrice, @discount, @rating, @sold, @category, @status)`,
+          @price, @originalPrice, @discount, @rating, @sold, @category,
+          @commissionRate, @shopName, @status)`,
     )
     .run({
       productKey: offer.productKey,
@@ -77,6 +81,8 @@ export function insertOffer(offer: MinedOffer): OfferRow | null {
       rating: offer.rating ?? null,
       sold: offer.sold ?? null,
       category: offer.category ?? null,
+      commissionRate: offer.commissionRate ?? null,
+      shopName: offer.shopName ?? null,
       status: OFFER_STATUS.PENDING,
     });
 
@@ -113,7 +119,7 @@ export function findById(id: number): OfferRow | null {
 /** Ofertas aguardando processamento (copy/imagem) ou publicação. */
 export function listByStatus(status: OfferStatus, limit = 20): OfferRow[] {
   return getDb()
-    .prepare('SELECT * FROM offers WHERE status = ? ORDER BY discount DESC, created_at ASC LIMIT ?')
+    .prepare('SELECT * FROM offers WHERE status = ? ORDER BY commission_rate DESC NULLS LAST, discount DESC, created_at ASC LIMIT ?')
     .all(status, limit) as OfferRow[];
 }
 
