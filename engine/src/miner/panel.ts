@@ -5,6 +5,7 @@ import { logger } from '../utils/logger.js';
 import { parseBRNumber, parseCsvRecords, parsePercent, parseSales } from '../utils/csv.js';
 import { buildProductKey, parseShopeeUrl, slugify } from '../utils/links.js';
 import { enrichFromDatafeed } from './datafeed.js';
+import { enrichFromProductPages } from './product-page.js';
 import type { MinedOffer, Miner, MinerOptions } from './types.js';
 
 /**
@@ -110,16 +111,22 @@ export const panelMiner: Miner = {
     const offers = loadPanelOffers();
     if (offers.length === 0) return [];
 
-    const enriched = await enrichFromDatafeed(offers);
+    // Datafeed primeiro (é local e rápido); o que sobrar sem imagem vai para
+    // a página do produto, que é mais lento mas dispensa o arquivo de 189 MB.
+    const enriched = await enrichFromProductPages(await enrichFromDatafeed(offers));
 
     const withImage = enriched.filter((offer) => offer.imageUrl);
     const skipped = enriched.length - withImage.length;
     if (skipped > 0) {
-      logger.warn(`${skipped} produto(s) sem imagem no datafeed — não podem virar pin, foram pulados.`);
+      logger.warn(`${skipped} produto(s) sem imagem — não podem virar pin, foram pulados.`);
     }
 
+    // O CSV do painel não traz preço original, então o desconto só é conhecido
+    // quando o datafeed completa a oferta. Filtrar por desconto desconhecido
+    // descartaria o lote inteiro — aqui o critério que vale é a comissão.
+    const minDiscount = options.minDiscount ?? 0;
     return withImage
-      .filter((offer) => (offer.discount ?? 0) >= (options.minDiscount ?? 0))
+      .filter((offer) => !offer.originalPrice || (offer.discount ?? 0) >= minDiscount)
       .sort((a, b) => estimatedPayout(b) - estimatedPayout(a))
       .slice(0, limit);
   },
