@@ -1,0 +1,102 @@
+name: Engine de Afiliados
+
+# Roda o pipeline na nuvem, sem depender de computador ligado:
+# minera os links do painel -> gera copy e pin com IA -> publica o feed.
+# O commit no fim dispara o deploy da Vercel, que serve as imagens.
+
+on:
+  schedule:
+    # 09h, 15h e 21h no horário de Brasília (UTC-3).
+    - cron: '0 12,18,0 * * *'
+  workflow_dispatch:
+    inputs:
+      batch_size:
+        description: 'Quantos pins publicar nesta execução'
+        required: false
+        default: '3'
+
+# Duas execuções ao mesmo tempo brigariam pelo banco e pelo push.
+concurrency:
+  group: engine
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+
+    env:
+      MINER_SOURCE: panel
+      PUBLIC_BASE_URL: https://bot-pinterest.vercel.app
+      PUBLISH_BATCH_SIZE: ${{ github.event.inputs.batch_size || '3' }}
+      DATABASE_PATH: storage/affiliate.db
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      SHOPEE_DATAFEED_URL: ${{ secrets.SHOPEE_DATAFEED_URL }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      # A faixa de preço do pin é desenhada em SVG: sem fonte instalada,
+      # o texto simplesmente não renderiza.
+      - name: Instalar fontes
+        run: sudo apt-get update && sudo apt-get install -y fonts-dejavu-core
+
+      - run: npm ci
+
+      # O datafeed tem ~189 MB; o cache evita rebaixar a cada execução.
+      - name: Cache do datafeed
+        id: cache-datafeed
+        uses: actions/cache@v4
+        with:
+          path: storage/datafeed.csv
+          key: datafeed-${{ github.run_id }}
+          restore-keys: datafeed-
+
+      - name: Baixar datafeed
+        if: env.SHOPEE_DATAFEED_URL != ''
+        run: |
+          if [ ! -f storage/datafeed.csv ]; then
+            npm run engine:datafeed
+          else
+            echo "Datafeed veio do cache ($(du -h storage/datafeed.csv | cut -f1))"
+          fi
+
+      - name: Rodar o pipeline
+        run: npm run engine
+
+      - name: Publicar o feed
+        run: npm run engine:feed
+
+      - name: Commitar resultado
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A public storage/affiliate.db
+          if git diff --staged --quiet; then
+            echo "Nada novo para publicar nesta execução."
+            exit 0
+          fi
+          git commit -m "chore(engine): novos pins no feed [skip ci]"
+          # Outra execução pode ter empurrado commits nesse meio-tempo.
+          git pull --rebase origin ${{ github.ref_name }}
+          git push origin HEAD:${{ github.ref_name }}
+
+      - name: Resumo
+        if: always()
+        run: |
+          echo "### Engine de Afiliados" >> $GITHUB_STEP_SUMMARY
+          if [ -f public/feed.json ]; then
+            echo "Pins no feed: $(node -e "console.log(require('./public/feed.json').length)")" >> $GITHUB_STEP_SUMMARY
+            echo "Feed: ${PUBLIC_BASE_URL}/feed.json" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Feed ainda não gerado." >> $GITHUB_STEP_SUMMARY
+          fi

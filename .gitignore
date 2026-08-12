@@ -1,2 +1,24 @@
 node_modules
 .vercel
+
+# Engine de afiliados
+.env
+engine/dist
+
+# storage/: por padrão ignorado, com exceções para o que o GitHub Actions
+# precisa que sobreviva entre execuções.
+storage/*
+!storage/.gitkeep
+# Links do painel: entram no repositório para a automação consumir.
+# Links de afiliado são públicos por natureza — não são segredo.
+!storage/links/
+# Banco: é o que garante que uma oferta não seja republicada.
+!storage/affiliate.db
+# Datafeed (189 MB) e imagens intermediárias ficam de fora.
+storage/datafeed.csv
+storage/images/
+*.db-shm
+*.db-wal
+
+# public/ É versionado: a Vercel publica a partir do repositório,
+# então os pins precisam estar aqui para ganhar URL pública.
