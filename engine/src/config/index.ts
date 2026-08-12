@@ -81,6 +81,12 @@ export const config = {
   /** Domínio público onde os pins ficam acessíveis (deploy da Vercel). */
   publicBaseUrl: (process.env.PUBLIC_BASE_URL ?? '').replace(/\/+$/, ''),
 
+  /**
+   * Qual foto da galeria vira o pin (0 = foto de catálogo, 1 = segunda).
+   * A segunda costuma mostrar o produto ambientado, que converte melhor.
+   */
+  productImageIndex: asInt(process.env.PRODUCT_IMAGE_INDEX, 1),
+
   /** Quantas ofertas publicar por ciclo — cadência conservadora evita bloqueio. */
   publishBatchSize: asInt(process.env.PUBLISH_BATCH_SIZE, 3),
 

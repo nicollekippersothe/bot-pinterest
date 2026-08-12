@@ -1,3 +1,4 @@
+import { config } from '../config/index.js';
 import { logger } from '../utils/logger.js';
 import type { MinedOffer } from './types.js';
 
@@ -35,6 +36,45 @@ export function extractOgImage(html: string): string | null {
   return withContentFirst ? withContentFirst[1] : null;
 }
 
+const IMAGE_HOST = 'https://down-br.img.susercontent.com/file';
+/** IDs de foto de produto: `br-11134207-7r98o-...`. Ícones do site não batem. */
+const PRODUCT_IMAGE_ID = /^[a-z]{2}-\d+-/i;
+
+/**
+ * Extrai a galeria de fotos na ordem em que o vendedor a montou.
+ *
+ * A primeira costuma ser a foto de catálogo (fundo branco); as seguintes
+ * costumam mostrar o produto ambientado, que é o que faz o pin converter no
+ * Pinterest. Variantes de baixa resolução (`_tn`, `_cover`) são descartadas.
+ */
+export function extractGalleryImages(html: string): string[] {
+  const seen = new Set<string>();
+  const gallery: string[] = [];
+
+  for (const match of html.matchAll(
+    /https:\/\/down-br\.img\.susercontent\.com\/file\/([a-z0-9_-]+)/gi,
+  )) {
+    const id = match[1];
+    if (/_(tn|cover|thumb)/i.test(id)) continue;
+    if (!PRODUCT_IMAGE_ID.test(id)) continue;
+    if (seen.has(id)) continue;
+
+    seen.add(id);
+    gallery.push(`${IMAGE_HOST}/${id}`);
+  }
+
+  return gallery;
+}
+
+/**
+ * Escolhe a foto do pin. `preferredIndex` aponta para a foto ambientada
+ * (padrão: a segunda); se a galeria for menor, cai para a primeira.
+ */
+export function pickPinImage(gallery: string[], preferredIndex: number): string | null {
+  if (gallery.length === 0) return null;
+  return gallery[preferredIndex] ?? gallery[0];
+}
+
 /** Devolve a URL da imagem principal do produto, ou null se não der. */
 export async function resolveProductImage(productUrl: string): Promise<string | null> {
   try {
@@ -48,7 +88,12 @@ export async function resolveProductImage(productUrl: string): Promise<string | 
       return null;
     }
 
-    return extractOgImage(await response.text());
+    const html = await response.text();
+
+    // Preferimos a galeria (dá acesso à foto ambientada); og:image é o
+    // fallback, já que sempre existe mesmo quando a galeria não é detectada.
+    const gallery = extractGalleryImages(html);
+    return pickPinImage(gallery, config.productImageIndex) ?? extractOgImage(html);
   } catch (error) {
     logger.debug(`falha ao ler página do produto: ${(error as Error).message}`);
     return null;
