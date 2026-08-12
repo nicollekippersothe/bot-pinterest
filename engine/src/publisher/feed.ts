@@ -27,6 +27,8 @@ export interface FeedItem {
   imageUrl: string;
   /** Link de afiliado rastreado. */
   link: string;
+  /** Quando entrou no feed (ISO 8601), para filtros por data no Make. */
+  feedAt: string;
   price: number;
   originalPrice: number | null;
   discount: number;
@@ -42,9 +44,10 @@ function buildPinterestDescription(offer: OfferRow): string {
   return combined.length <= 800 ? combined : combined.slice(0, 797).trimEnd() + '…';
 }
 
-function toFeedItem(offer: OfferRow, fileName: string): FeedItem {
+function toFeedItem(offer: OfferRow, fileName: string, feedAt: string): FeedItem {
   return {
     id: offer.id,
+    feedAt,
     title: (offer.pin_title ?? offer.title).slice(0, 100),
     description: offer.pin_description ?? '',
     hashtags: parseHashtags(offer.hashtags),
@@ -92,16 +95,19 @@ export function publishFeed(limit = config.publishBatchSize): FeedItem[] {
     const fileName = path.basename(offer.pin_image_path);
     fs.copyFileSync(offer.pin_image_path, path.join(PUBLIC_PINS_DIR, fileName));
 
-    added.push(toFeedItem(offer, fileName));
-    updateOffer(offer.id, { feed_at: new Date().toISOString() });
+    const feedAt = new Date().toISOString();
+    added.push(toFeedItem(offer, fileName, feedAt));
+    updateOffer(offer.id, { feed_at: feedAt });
   }
 
-  // O feed acumula: o Make consome do topo, e o histórico serve de conferência.
-  const feed = [...added, ...readFeed()];
+  // O feed é uma janela dos itens mais recentes, não um arquivo histórico:
+  // o Make consulta o Data Store item a item, e cada item custa operação.
+  // Quem garante que nada é republicado é o Data Store, não o tamanho daqui.
+  const feed = [...added, ...readFeed()].slice(0, config.feedMaxItems);
   fs.mkdirSync(PUBLIC_DIR, { recursive: true });
   fs.writeFileSync(feedPath(), JSON.stringify(feed, null, 2));
 
-  logger.success(`Feed atualizado: +${added.length} pin(s), ${feed.length} no total`);
+  logger.success(`Feed atualizado: +${added.length} pin(s), ${feed.length} na janela`);
   logger.info(`Publique com: npm run build && vercel --prod (ou git push, se houver deploy automático)`);
   return feed;
 }

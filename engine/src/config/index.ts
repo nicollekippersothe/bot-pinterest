@@ -87,6 +87,13 @@ export const config = {
    */
   productImageIndex: asInt(process.env.PRODUCT_IMAGE_INDEX, 1),
 
+  /**
+   * Quantos itens o feed mantém. O Make gasta uma operação por item a cada
+   * execução, então a janela precisa ser curta — a deduplicação real fica
+   * por conta do Data Store do lado dele.
+   */
+  feedMaxItems: asInt(process.env.FEED_MAX_ITEMS, 30),
+
   /** Quantas ofertas publicar por ciclo — cadência conservadora evita bloqueio. */
   publishBatchSize: asInt(process.env.PUBLISH_BATCH_SIZE, 3),
 
