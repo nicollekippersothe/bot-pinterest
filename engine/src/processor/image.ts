@@ -10,10 +10,9 @@ import type { OfferRow } from '../database/offers.js';
 const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
 const DOWNLOAD_TIMEOUT_MS = 20_000;
 
-/** Margem interna: o produto nunca encosta na borda do pin. */
-const PRODUCT_PADDING = 70;
-/** Faixa inferior reservada para preço e desconto. */
-const BANNER_HEIGHT = 260;
+/** A foto ocupa a largura toda e 72% da altura; o resto é a faixa de texto. */
+const PHOTO_HEIGHT = Math.round(PIN_HEIGHT * 0.72);
+const BANNER_HEIGHT = PIN_HEIGHT - PHOTO_HEIGHT;
 
 export interface PinImageResult {
   /** Caminho absoluto do arquivo gerado. */
@@ -81,77 +80,94 @@ async function buildBackground(source: Buffer): Promise<Buffer> {
     .toBuffer();
 }
 
-/**
- * Produto redimensionado para caber inteiro na área útil (`fit: 'contain'`),
- * então nada é cortado — inclusive fotos quadradas, que é o caso da Shopee.
- */
-async function buildProductLayer(source: Buffer): Promise<{ buffer: Buffer; height: number }> {
-  const boxWidth = PIN_WIDTH - PRODUCT_PADDING * 2;
-  const boxHeight = PIN_HEIGHT - BANNER_HEIGHT - PRODUCT_PADDING * 2;
+/** Quebra o título em até duas linhas que cabem na largura do pin. */
+export function wrapTitle(title: string, maxChars = 30, maxLines = 2): string[] {
+  const words = title.split(/\s+/);
+  const lines: string[] = [];
+  let current = '';
 
-  const buffer = await sharp(source)
-    .resize(boxWidth, boxHeight, {
-      fit: 'contain',
-      background: { r: 255, g: 255, b: 255, alpha: 0 },
-    })
-    .png()
-    .toBuffer();
+  for (const word of words) {
+    const candidate = current ? `${current} ${word}` : word;
+    if (candidate.length <= maxChars) {
+      current = candidate;
+      continue;
+    }
+    lines.push(current);
+    current = word;
+    if (lines.length === maxLines) break;
+  }
+  if (lines.length < maxLines && current) lines.push(current);
 
-  return { buffer, height: boxHeight };
+  const used = lines.join(' ').length;
+  if (lines.length === maxLines && used < title.length) {
+    lines[maxLines - 1] = `${lines[maxLines - 1].slice(0, maxChars - 1)}…`;
+  }
+  return lines;
 }
 
-/** Faixa inferior com preço, preço original riscado e selo de desconto. */
+/**
+ * Foto sangrando na largura toda, com corte guiado pela região de maior
+ * interesse — chama muito mais atenção no feed do que produto recortado
+ * flutuando num fundo desfocado.
+ */
+async function buildPhotoLayer(source: Buffer): Promise<Buffer> {
+  return sharp(source)
+    .resize(PIN_WIDTH, PHOTO_HEIGHT, { fit: 'cover', position: sharp.strategy.attention })
+    .toBuffer();
+}
+
+/** Faixa inferior: nome do produto, preço original riscado e preço em destaque. */
 function buildBannerSvg(offer: OfferRow): Buffer {
   const price = escapeXml(formatBRL(offer.price));
   const original = offer.original_price ? escapeXml(formatBRL(offer.original_price)) : null;
   const discount = offer.discount ?? 0;
-  const fontStack = "'DejaVu Sans', 'Liberation Sans', Arial, Helvetica, sans-serif";
+  const fontStack = "'DejaVu Sans', 'Liberation Sans', Arial, sans-serif";
+  const lines = wrapTitle(offer.pin_title ?? offer.title);
 
-  // Largura aproximada do preço original, para posicionar o risco por cima.
-  const originalWidth = original ? original.length * 17 : 0;
   const badge =
     discount > 0
-      ? `
-      <rect x="${PIN_WIDTH - 260}" y="${BANNER_HEIGHT / 2 - 55}" width="200" height="110" rx="24" fill="#e63946"/>
-      <text x="${PIN_WIDTH - 160}" y="${BANNER_HEIGHT / 2 - 4}" text-anchor="middle"
-            font-family="${fontStack}" font-size="52" font-weight="bold" fill="#ffffff">${discount}%</text>
-      <text x="${PIN_WIDTH - 160}" y="${BANNER_HEIGHT / 2 + 38}" text-anchor="middle"
-            font-family="${fontStack}" font-size="28" font-weight="bold" fill="#ffffff">OFF</text>`
+      ? `<rect x="44" y="44" width="188" height="72" rx="36" fill="#e63946"/>
+         <text x="138" y="94" text-anchor="middle" font-family="${fontStack}"
+               font-size="38" font-weight="bold" fill="#ffffff">-${discount}%</text>`
       : '';
 
   const originalMarkup = original
-    ? `
-      <text x="60" y="${BANNER_HEIGHT / 2 - 44}" font-family="${fontStack}" font-size="34" fill="#8d99ae">${original}</text>
-      <line x1="56" y1="${BANNER_HEIGHT / 2 - 55}" x2="${60 + originalWidth}" y2="${BANNER_HEIGHT / 2 - 55}"
-            stroke="#8d99ae" stroke-width="3"/>`
+    ? `<text x="50" y="${PHOTO_HEIGHT + 250}" font-family="${fontStack}" font-size="34" fill="#7d95a3">${original}</text>
+       <line x1="46" y1="${PHOTO_HEIGHT + 238}" x2="${50 + original.length * 19}" y2="${PHOTO_HEIGHT + 238}"
+             stroke="#7d95a3" stroke-width="3"/>`
     : '';
 
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${PIN_WIDTH}" height="${BANNER_HEIGHT}">
-      <rect width="${PIN_WIDTH}" height="${BANNER_HEIGHT}" fill="#ffffff"/>
-      <rect width="${PIN_WIDTH}" height="8" fill="#e63946"/>
-      ${originalMarkup}
-      <text x="60" y="${BANNER_HEIGHT / 2 + 40}" font-family="${fontStack}" font-size="78"
-            font-weight="bold" fill="#1d3557">${price}</text>
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${PIN_WIDTH}" height="${PIN_HEIGHT}">
+      <rect y="${PHOTO_HEIGHT}" width="${PIN_WIDTH}" height="${BANNER_HEIGHT}" fill="#0d1f2d"/>
       ${badge}
+      ${lines
+        .map(
+          (line, index) =>
+            `<text x="50" y="${PHOTO_HEIGHT + 78 + index * 52}" font-family="${fontStack}"
+                   font-size="42" font-weight="bold" fill="#ffffff">${escapeXml(line)}</text>`,
+        )
+        .join('')}
+      ${originalMarkup}
+      <text x="50" y="${PHOTO_HEIGHT + 350}" font-family="${fontStack}" font-size="96"
+            font-weight="bold" fill="#ffd166">${price}</text>
+      <text x="${PIN_WIDTH - 50}" y="${PHOTO_HEIGHT + 348}" text-anchor="end"
+            font-family="${fontStack}" font-size="30" font-weight="bold" fill="#7fd1b9">na Shopee →</text>
     </svg>`;
 
   return Buffer.from(svg);
 }
 
-/**
- * Monta o pin 1000x1500 (2:3) exigido pelo Pinterest:
- * fundo desfocado + produto inteiro centralizado + faixa de preço.
- */
+/** Monta o pin 1000x1500 (2:3) exigido pelo Pinterest. */
 export async function buildPinImage(offer: OfferRow, imageBuffer: Buffer): Promise<PinImageResult> {
-  const [background, product] = await Promise.all([
+  const [background, photo] = await Promise.all([
     buildBackground(imageBuffer),
-    buildProductLayer(imageBuffer),
+    buildPhotoLayer(imageBuffer),
   ]);
 
   const composed = await sharp(background)
     .composite([
-      { input: product.buffer, top: PRODUCT_PADDING, left: PRODUCT_PADDING },
-      { input: buildBannerSvg(offer), top: PIN_HEIGHT - BANNER_HEIGHT, left: 0 },
+      { input: photo, top: 0, left: 0 },
+      { input: buildBannerSvg(offer), top: 0, left: 0 },
     ])
     .jpeg({ quality: 90, chromaSubsampling: '4:4:4' })
     .toBuffer();

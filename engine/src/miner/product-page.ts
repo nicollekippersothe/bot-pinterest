@@ -1,5 +1,6 @@
 import { config } from '../config/index.js';
 import { logger } from '../utils/logger.js';
+import { pickUsableImage } from './image-quality.js';
 import type { MinedOffer } from './types.js';
 
 /**
@@ -66,13 +67,14 @@ export function extractGalleryImages(html: string): string[] {
   return gallery;
 }
 
-/**
- * Escolhe a foto do pin. `preferredIndex` aponta para a foto ambientada
- * (padrão: a segunda); se a galeria for menor, cai para a primeira.
- */
-export function pickPinImage(gallery: string[], preferredIndex: number): string | null {
-  if (gallery.length === 0) return null;
-  return gallery[preferredIndex] ?? gallery[0];
+/** Baixa uma imagem para avaliação de qualidade. */
+async function fetchImage(url: string): Promise<Buffer> {
+  const response = await fetch(url, {
+    headers: { 'User-Agent': USER_AGENT },
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
+  if (!response.ok) throw new Error(`status ${response.status}`);
+  return Buffer.from(await response.arrayBuffer());
 }
 
 /** Devolve a URL da imagem principal do produto, ou null se não der. */
@@ -93,7 +95,10 @@ export async function resolveProductImage(productUrl: string): Promise<string | 
     // Preferimos a galeria (dá acesso à foto ambientada); og:image é o
     // fallback, já que sempre existe mesmo quando a galeria não é detectada.
     const gallery = extractGalleryImages(html);
-    return pickPinImage(gallery, config.productImageIndex) ?? extractOgImage(html);
+    if (gallery.length === 0) return extractOgImage(html);
+
+    // Descarta rótulo/código de barras antes de gastar tempo gerando o pin.
+    return pickUsableImage(gallery, config.productImageIndex, fetchImage);
   } catch (error) {
     logger.debug(`falha ao ler página do produto: ${(error as Error).message}`);
     return null;
