@@ -88,11 +88,17 @@ export const config = {
   productImageIndex: asInt(process.env.PRODUCT_IMAGE_INDEX, 1),
 
   /**
-   * Quantos itens o feed mantém. O Make gasta uma operação por item a cada
-   * execução, então a janela precisa ser curta — a deduplicação real fica
-   * por conta do Data Store do lado dele.
+   * Quantos itens o feed mantém.
+   *
+   * O Make consulta o Data Store uma vez por item, em toda execução — mesmo
+   * quando nada mudou. A janela é multiplicador direto de custo: com 30 itens
+   * e 3 execuções por dia são 90 operações diárias só para reconfirmar o que
+   * já foi publicado, e o plano Free do Make dá ~33 por dia.
+   *
+   * Duas vezes o lote basta: cobre um ciclo mais a folga de um atraso do Make.
+   * Quem garante que nada é republicado é o Data Store, não o tamanho daqui.
    */
-  feedMaxItems: asInt(process.env.FEED_MAX_ITEMS, 30),
+  feedMaxItems: asInt(process.env.FEED_MAX_ITEMS, 6),
 
   /** Quantas ofertas publicar por ciclo — cadência conservadora evita bloqueio. */
   publishBatchSize: asInt(process.env.PUBLISH_BATCH_SIZE, 3),
