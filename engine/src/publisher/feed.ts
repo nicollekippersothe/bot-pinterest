@@ -3,6 +3,7 @@ import path from 'node:path';
 import { config, PUBLIC_DIR, PUBLIC_PINS_DIR } from '../config/index.js';
 import { listByStatus, updateOffer, type OfferRow } from '../database/offers.js';
 import { OFFER_STATUS } from '../database/schema.js';
+import { generatePin } from '../processor/image.js';
 import { logger } from '../utils/logger.js';
 import { writeRssFeed } from './rss.js';
 import { parseHashtags } from './telegram.js';
@@ -64,12 +65,41 @@ function toFeedItem(offer: OfferRow, fileName: string, feedAt: string): FeedItem
 }
 
 /**
+ * Devolve o caminho do pin da oferta, gerando de novo se o arquivo sumiu.
+ *
+ * `storage/images/` não é versionado, mas o banco é. No GitHub Actions o clone
+ * traz o `pin_image_path` de uma máquina que o runner nunca viu, e o arquivo
+ * não existe ali. Antes disso ser tratado, a oferta era pulada sem receber
+ * `feed_at` — então era pulada de novo em toda execução, para sempre.
+ */
+async function ensurePin(offer: OfferRow): Promise<string | null> {
+  if (offer.pin_image_path && fs.existsSync(offer.pin_image_path)) {
+    return offer.pin_image_path;
+  }
+
+  if (!offer.image_url) {
+    logger.warn(`Oferta ${offer.id} não tem imagem de origem — fora do feed.`);
+    return null;
+  }
+
+  try {
+    const { filePath } = await generatePin(offer);
+    updateOffer(offer.id, { pin_image_path: filePath });
+    logger.info(`Pin da oferta ${offer.id} regenerado (arquivo não estava no disco).`);
+    return filePath;
+  } catch (error) {
+    logger.warn(`Oferta ${offer.id}: falha ao gerar o pin — ${(error as Error).message}`);
+    return null;
+  }
+}
+
+/**
  * Copia os pins para `public/pins/` e (re)escreve `public/feed.json`.
  *
  * Só entram ofertas ainda não enfileiradas (`feed_at` vazio), então rodar de
  * novo não duplica nada — mesma garantia do resto do pipeline.
  */
-export function publishFeed(limit = config.publishBatchSize): FeedItem[] {
+export async function publishFeed(limit = config.publishBatchSize): Promise<FeedItem[]> {
   if (!config.publicBaseUrl) {
     throw new Error(
       'PUBLIC_BASE_URL não configurada no .env (ex.: https://seu-app.vercel.app)',
@@ -90,13 +120,11 @@ export function publishFeed(limit = config.publishBatchSize): FeedItem[] {
 
   const added: FeedItem[] = [];
   for (const offer of batch) {
-    if (!offer.pin_image_path || !fs.existsSync(offer.pin_image_path)) {
-      logger.warn(`Oferta ${offer.id} sem imagem gerada — fora do feed.`);
-      continue;
-    }
+    const pinPath = await ensurePin(offer);
+    if (!pinPath) continue;
 
-    const fileName = path.basename(offer.pin_image_path);
-    fs.copyFileSync(offer.pin_image_path, path.join(PUBLIC_PINS_DIR, fileName));
+    const fileName = path.basename(pinPath);
+    fs.copyFileSync(pinPath, path.join(PUBLIC_PINS_DIR, fileName));
 
     const feedAt = new Date().toISOString();
     added.push(toFeedItem(offer, fileName, feedAt));

@@ -1,5 +1,47 @@
 [
   {
+    "id": 5,
+    "feedAt": "2026-08-16T23:16:09.796Z",
+    "title": "Areia Catbio Biodegradável 4 Kg - Max Clean - Grãos Finos por R$ 47,90 (Oferta)",
+    "description": "Areia Catbio Biodegradável 4 Kg - Max Clean - Grãos Finos sai por R$ 47,90 na Shopee. Ideal para quem procura achadinhos com bom custo-benefício. Confira a oferta antes que o preço mude.",
+    "hashtags": [
+      "#achadinhos",
+      "#promocao",
+      "#shopee",
+      "#ofertadodia",
+      "#economia"
+    ],
+    "pinterestDescription": "Areia Catbio Biodegradável 4 Kg - Max Clean - Grãos Finos sai por R$ 47,90 na Shopee. Ideal para quem procura achadinhos com bom custo-benefício. Confira a oferta antes que o preço mude.\n\n#achadinhos #promocao #shopee #ofertadodia #economia",
+    "imageUrl": "https://bot-pinterest.vercel.app/pins/5-areia-catbio-biodegradavel-4-kg-max-clea.jpg",
+    "link": "https://s.shopee.com.br/6VMzw7Iol2",
+    "price": 47.9,
+    "originalPrice": null,
+    "discount": 0,
+    "commissionRate": 7.84,
+    "category": null
+  },
+  {
+    "id": 10,
+    "feedAt": "2026-08-16T23:15:44.491Z",
+    "title": "Percarbonato 100% Puro Tira Manchas Roupas Brancas e Coloridas por R$ 17,99 (Oferta)",
+    "description": "Percarbonato 100% Puro Tira Manchas Roupas Brancas e Coloridas sai por R$ 17,99 na Shopee. Ideal para quem procura achadinhos com bom custo-benefício. Confira a oferta antes que o preço mude.",
+    "hashtags": [
+      "#achadinhos",
+      "#promocao",
+      "#shopee",
+      "#ofertadodia",
+      "#economia"
+    ],
+    "pinterestDescription": "Percarbonato 100% Puro Tira Manchas Roupas Brancas e Coloridas sai por R$ 17,99 na Shopee. Ideal para quem procura achadinhos com bom custo-benefício. Confira a oferta antes que o preço mude.\n\n#achadinhos #promocao #shopee #ofertadodia #economia",
+    "imageUrl": "https://bot-pinterest.vercel.app/pins/10-percarbonato-100-puro-tira-manchas-roupa.jpg",
+    "link": "https://s.shopee.com.br/6Ak9XVK5R0",
+    "price": 17.99,
+    "originalPrice": null,
+    "discount": 0,
+    "commissionRate": 8.5,
+    "category": null
+  },
+  {
     "id": 7,
     "feedAt": "2026-08-16T23:13:28.314Z",
     "title": "Tira manchas alvejante 1kg + Percarbonato de sódio 1kg por R$ 15,96 (Oferta)",
@@ -81,48 +123,6 @@
     "originalPrice": null,
     "discount": 0,
     "commissionRate": 11.5,
-    "category": null
-  },
-  {
-    "id": 12,
-    "feedAt": "2026-08-14T20:45:43.037Z",
-    "title": "Jogo de Lençol 400 Fios Extra Macio com fronhas ponto palito Berço Solteiro Casal Queen King 02 e…",
-    "description": "Jogo de Lençol 400 Fios Extra Macio com fronhas ponto palito Berço Solteiro Casal Queen King 02 e 03 Peças sai por R$ 11,70 na Shopee. Ideal para quem procura achadinhos com bom custo-benefício. Confira a oferta antes que o preço mude.",
-    "hashtags": [
-      "#achadinhos",
-      "#promocao",
-      "#shopee",
-      "#ofertadodia",
-      "#economia"
-    ],
-    "pinterestDescription": "Jogo de Lençol 400 Fios Extra Macio com fronhas ponto palito Berço Solteiro Casal Queen King 02 e 03 Peças sai por R$ 11,70 na Shopee. Ideal para quem procura achadinhos com bom custo-benefício. Confira a oferta antes que o preço mude.\n\n#achadinhos #promocao #shopee #ofertadodia #economia",
-    "imageUrl": "https://bot-pinterest.vercel.app/pins/12-jogo-de-lencol-400-fios-extra-macio-com-.jpg",
-    "link": "https://s.shopee.com.br/40fexPi9hy",
-    "price": 11.7,
-    "originalPrice": null,
-    "discount": 0,
-    "commissionRate": 12.39,
-    "category": null
-  },
-  {
-    "id": 3,
-    "feedAt": "2026-08-14T00:20:58.928Z",
-    "title": "Arranjo c/ 3 Trepadeira Folha de HERA + Vaso Trançado Marrom por R$ 16,80 (Oferta)",
-    "description": "Arranjo c/ 3 Trepadeira Folha de HERA + Vaso Trançado Marrom sai por R$ 16,80 na Shopee. Ideal para quem procura achadinhos com bom custo-benefício. Confira a oferta antes que o preço mude.",
-    "hashtags": [
-      "#achadinhos",
-      "#promocao",
-      "#shopee",
-      "#ofertadodia",
-      "#economia"
-    ],
-    "pinterestDescription": "Arranjo c/ 3 Trepadeira Folha de HERA + Vaso Trançado Marrom sai por R$ 16,80 na Shopee. Ideal para quem procura achadinhos com bom custo-benefício. Confira a oferta antes que o preço mude.\n\n#achadinhos #promocao #shopee #ofertadodia #economia",
-    "imageUrl": "https://bot-pinterest.vercel.app/pins/3-arranjo-c-3-trepadeira-folha-de-hera-vas.jpg",
-    "link": "https://s.shopee.com.br/70JGX8EQEb",
-    "price": 16.8,
-    "originalPrice": null,
-    "discount": 0,
-    "commissionRate": 26.5,
     "category": null
   }
 ]

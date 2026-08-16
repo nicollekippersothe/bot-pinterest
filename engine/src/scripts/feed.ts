@@ -18,7 +18,7 @@ const requested = Number(process.argv[2]);
 const limit = Number.isInteger(requested) && requested > 0 ? requested : undefined;
 
 try {
-  const feed = publishFeed(limit);
+  const feed = await publishFeed(limit);
   for (const item of feed.slice(0, 5)) {
     logger.info(`• ${item.title}`);
     logger.info(`  ${item.imageUrl}`);
