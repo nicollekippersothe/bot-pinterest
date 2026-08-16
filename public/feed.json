@@ -124,26 +124,5 @@
     "discount": 0,
     "commissionRate": 13,
     "category": null
-  },
-  {
-    "id": 8,
-    "feedAt": "2026-08-14T00:20:58.933Z",
-    "title": "Jogo de Lençol 400 fios toque Suave e Acetinado Berço Solteiro Casal Queen King 02 e 03 Peças por…",
-    "description": "Jogo de Lençol 400 fios toque Suave e Acetinado Berço Solteiro Casal Queen King 02 e 03 Peças sai por R$ 13,50 na Shopee. Ideal para quem procura achadinhos com bom custo-benefício. Confira a oferta antes que o preço mude.",
-    "hashtags": [
-      "#achadinhos",
-      "#promocao",
-      "#shopee",
-      "#ofertadodia",
-      "#economia"
-    ],
-    "pinterestDescription": "Jogo de Lençol 400 fios toque Suave e Acetinado Berço Solteiro Casal Queen King 02 e 03 Peças sai por R$ 13,50 na Shopee. Ideal para quem procura achadinhos com bom custo-benefício. Confira a oferta antes que o preço mude.\n\n#achadinhos #promocao #shopee #ofertadodia #economia",
-    "imageUrl": "https://bot-pinterest.vercel.app/pins/8-jogo-de-lencol-400-fios-toque-suave-e-ac.jpg",
-    "link": "https://s.shopee.com.br/6L3ZjoJS61",
-    "price": 13.5,
-    "originalPrice": null,
-    "discount": 0,
-    "commissionRate": 12.39,
-    "category": null
   }
 ]
