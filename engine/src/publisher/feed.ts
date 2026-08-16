@@ -4,6 +4,7 @@ import { config, PUBLIC_DIR, PUBLIC_PINS_DIR } from '../config/index.js';
 import { listByStatus, updateOffer, type OfferRow } from '../database/offers.js';
 import { OFFER_STATUS } from '../database/schema.js';
 import { logger } from '../utils/logger.js';
+import { writeRssFeed } from './rss.js';
 import { parseHashtags } from './telegram.js';
 
 /**
@@ -80,7 +81,9 @@ export function publishFeed(limit = config.publishBatchSize): FeedItem[] {
 
   if (batch.length === 0) {
     logger.info('Nenhuma oferta nova para o feed.');
-    return readFeed();
+    const current = readFeed();
+    writeRssFeed(current);
+    return current;
   }
 
   fs.mkdirSync(PUBLIC_PINS_DIR, { recursive: true });
@@ -106,6 +109,7 @@ export function publishFeed(limit = config.publishBatchSize): FeedItem[] {
   const feed = [...added, ...readFeed()].slice(0, config.feedMaxItems);
   fs.mkdirSync(PUBLIC_DIR, { recursive: true });
   fs.writeFileSync(feedPath(), JSON.stringify(feed, null, 2));
+  writeRssFeed(feed);
 
   logger.success(`Feed atualizado: +${added.length} pin(s), ${feed.length} na janela`);
   logger.info(`Publique com: npm run build && vercel --prod (ou git push, se houver deploy automático)`);
