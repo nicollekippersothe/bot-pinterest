@@ -106,7 +106,12 @@ export function publishFeed(limit = config.publishBatchSize): FeedItem[] {
   // O feed é uma janela dos itens mais recentes, não um arquivo histórico:
   // o Make consulta o Data Store item a item, e cada item custa operação.
   // Quem garante que nada é republicado é o Data Store, não o tamanho daqui.
-  const feed = [...added, ...readFeed()].slice(0, config.feedMaxItems);
+  // Uma oferta reenfileirada (feed_at de volta a nulo) já está na janela antiga
+  // com o feedAt anterior. Sem descartar a versão velha, o mesmo produto sairia
+  // duas vezes no RSS — com GUIDs diferentes, virando dois pins.
+  const addedIds = new Set(added.map((item) => item.id));
+  const previous = readFeed().filter((item) => !addedIds.has(item.id));
+  const feed = [...added, ...previous].slice(0, config.feedMaxItems);
   fs.mkdirSync(PUBLIC_DIR, { recursive: true });
   fs.writeFileSync(feedPath(), JSON.stringify(feed, null, 2));
   writeRssFeed(feed);

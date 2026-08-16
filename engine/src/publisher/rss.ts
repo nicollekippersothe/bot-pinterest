@@ -13,8 +13,13 @@ import type { FeedItem } from './feed.js';
  * que o Make fazia com o Data Store.
  *
  * O gatilho de RSS resolve isso de graça: ele guarda os GUIDs que já viu e só
- * dispara para item inédito. Por isso o GUID aqui é estável e derivado do id da
- * oferta — se ele mudar, o item é republicado.
+ * dispara para item inédito.
+ *
+ * O GUID combina o id da oferta com o instante de entrada no feed. Isso importa
+ * por causa de um comportamento do Zapier: ao ligar o Zap, o primeiro poll
+ * marca como visto tudo que já estava no arquivo, e esses GUIDs nunca mais
+ * disparam. Amarrando o GUID ao `feedAt`, basta reenfileirar a oferta
+ * (`feed_at` de volta a nulo e novo `engine:feed`) para ela virar item inédito.
  *
  * A contrapartida é que o arquivo não pode conter nada que já esteja no
  * Pinterest: quando o Zap é ligado, o Zapier pode processar itens que já estão
@@ -46,7 +51,7 @@ function toRssItem(item: FeedItem): string {
       <title>${escapeXml(item.title)}</title>
       <link>${escapeXml(item.link)}</link>
       <description>${escapeXml(item.pinterestDescription)}</description>
-      <guid isPermaLink="false">pin-${item.id}</guid>
+      <guid isPermaLink="false">pin-${item.id}-${Date.parse(item.feedAt)}</guid>
       <pubDate>${pubDate}</pubDate>
       <enclosure url="${escapeXml(item.imageUrl)}" type="${IMAGE_MIME}" length="0"/>
       <media:content url="${escapeXml(item.imageUrl)}" medium="image" type="${IMAGE_MIME}"/>

@@ -1,28 +1,7 @@
 [
   {
-    "id": 6,
-    "feedAt": "2026-08-16T21:11:16.764Z",
-    "title": "Batedor Misturador Mixer Elétrico para Bebidas Leite Café Clara de Ovo 2 em 1 por R$ 18,99 (Oferta)",
-    "description": "Batedor Misturador Mixer Elétrico para Bebidas Leite Café Clara de Ovo 2 em 1 sai por R$ 18,99 na Shopee. Ideal para quem procura achadinhos com bom custo-benefício. Confira a oferta antes que o preço mude.",
-    "hashtags": [
-      "#achadinhos",
-      "#promocao",
-      "#shopee",
-      "#ofertadodia",
-      "#economia"
-    ],
-    "pinterestDescription": "Batedor Misturador Mixer Elétrico para Bebidas Leite Café Clara de Ovo 2 em 1 sai por R$ 18,99 na Shopee. Ideal para quem procura achadinhos com bom custo-benefício. Confira a oferta antes que o preço mude.\n\n#achadinhos #promocao #shopee #ofertadodia #economia",
-    "imageUrl": "https://bot-pinterest.vercel.app/pins/6-batedor-misturador-mixer-eletrico-para-b.jpg",
-    "link": "https://s.shopee.com.br/5LB2XyNG7n",
-    "price": 18.99,
-    "originalPrice": null,
-    "discount": 0,
-    "commissionRate": 11.5,
-    "category": null
-  },
-  {
     "id": 7,
-    "feedAt": "2026-08-16T21:11:16.767Z",
+    "feedAt": "2026-08-16T23:13:28.314Z",
     "title": "Tira manchas alvejante 1kg + Percarbonato de sódio 1kg por R$ 15,96 (Oferta)",
     "description": "Tira manchas alvejante 1kg + Percarbonato de sódio 1kg sai por R$ 15,96 na Shopee. Ideal para quem procura achadinhos com bom custo-benefício. Confira a oferta antes que o preço mude.",
     "hashtags": [
@@ -43,7 +22,7 @@
   },
   {
     "id": 11,
-    "feedAt": "2026-08-16T21:11:16.801Z",
+    "feedAt": "2026-08-16T23:13:28.317Z",
     "title": "Escova de Dentes Recarregável Elétrica Portátil Ultrassônica com Cabeças Substituíveis por R$…",
     "description": "Escova de Dentes Recarregável Elétrica Portátil Ultrassônica com Cabeças Substituíveis sai por R$ 12,99 na Shopee. Ideal para quem procura achadinhos com bom custo-benefício. Confira a oferta antes que o preço mude.",
     "hashtags": [
@@ -57,6 +36,48 @@
     "imageUrl": "https://bot-pinterest.vercel.app/pins/11-escova-de-dentes-recarregavel-eletrica-p.jpg",
     "link": "https://s.shopee.com.br/7psNWfBFXo",
     "price": 12.99,
+    "originalPrice": null,
+    "discount": 0,
+    "commissionRate": 11.5,
+    "category": null
+  },
+  {
+    "id": 14,
+    "feedAt": "2026-08-16T23:13:28.318Z",
+    "title": "Percarbonato de Sódio 100% Puro Limpeza Em Geral Tira Manchas Roupas Brancas 500g/1kg /2kg por R$…",
+    "description": "Percarbonato de Sódio 100% Puro Limpeza Em Geral Tira Manchas Roupas Brancas 500g/1kg /2kg sai por R$ 10,00 na Shopee. Ideal para quem procura achadinhos com bom custo-benefício. Confira a oferta antes que o preço mude.",
+    "hashtags": [
+      "#achadinhos",
+      "#promocao",
+      "#shopee",
+      "#ofertadodia",
+      "#economia"
+    ],
+    "pinterestDescription": "Percarbonato de Sódio 100% Puro Limpeza Em Geral Tira Manchas Roupas Brancas 500g/1kg /2kg sai por R$ 10,00 na Shopee. Ideal para quem procura achadinhos com bom custo-benefício. Confira a oferta antes que o preço mude.\n\n#achadinhos #promocao #shopee #ofertadodia #economia",
+    "imageUrl": "https://bot-pinterest.vercel.app/pins/14-percarbonato-de-sodio-100-puro-limpeza-e.jpg",
+    "link": "https://s.shopee.com.br/5VUSkHMcmo",
+    "price": 10,
+    "originalPrice": null,
+    "discount": 0,
+    "commissionRate": 11.5,
+    "category": null
+  },
+  {
+    "id": 6,
+    "feedAt": "2026-08-16T21:11:16.764Z",
+    "title": "Batedor Misturador Mixer Elétrico para Bebidas Leite Café Clara de Ovo 2 em 1 por R$ 18,99 (Oferta)",
+    "description": "Batedor Misturador Mixer Elétrico para Bebidas Leite Café Clara de Ovo 2 em 1 sai por R$ 18,99 na Shopee. Ideal para quem procura achadinhos com bom custo-benefício. Confira a oferta antes que o preço mude.",
+    "hashtags": [
+      "#achadinhos",
+      "#promocao",
+      "#shopee",
+      "#ofertadodia",
+      "#economia"
+    ],
+    "pinterestDescription": "Batedor Misturador Mixer Elétrico para Bebidas Leite Café Clara de Ovo 2 em 1 sai por R$ 18,99 na Shopee. Ideal para quem procura achadinhos com bom custo-benefício. Confira a oferta antes que o preço mude.\n\n#achadinhos #promocao #shopee #ofertadodia #economia",
+    "imageUrl": "https://bot-pinterest.vercel.app/pins/6-batedor-misturador-mixer-eletrico-para-b.jpg",
+    "link": "https://s.shopee.com.br/5LB2XyNG7n",
+    "price": 18.99,
     "originalPrice": null,
     "discount": 0,
     "commissionRate": 11.5,
@@ -102,27 +123,6 @@
     "originalPrice": null,
     "discount": 0,
     "commissionRate": 26.5,
-    "category": null
-  },
-  {
-    "id": 1,
-    "feedAt": "2026-08-14T00:20:58.931Z",
-    "title": "Creme Depilatório Corporal Depilsam Karité 200G por R$ 69,90 (Oferta)",
-    "description": "Creme Depilatório Corporal Depilsam Karité 200G sai por R$ 69,90 na Shopee. Ideal para quem procura achadinhos com bom custo-benefício. Confira a oferta antes que o preço mude.",
-    "hashtags": [
-      "#achadinhos",
-      "#promocao",
-      "#shopee",
-      "#ofertadodia",
-      "#economia"
-    ],
-    "pinterestDescription": "Creme Depilatório Corporal Depilsam Karité 200G sai por R$ 69,90 na Shopee. Ideal para quem procura achadinhos com bom custo-benefício. Confira a oferta antes que o preço mude.\n\n#achadinhos #promocao #shopee #ofertadodia #economia",
-    "imageUrl": "https://bot-pinterest.vercel.app/pins/1-creme-depilatorio-corporal-depilsam-kari.jpg",
-    "link": "https://s.shopee.com.br/9zws6bmLdB",
-    "price": 69.9,
-    "originalPrice": null,
-    "discount": 0,
-    "commissionRate": 17.84,
     "category": null
   }
 ]
