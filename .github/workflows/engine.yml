@@ -6,14 +6,20 @@ name: Engine de Afiliados
 
 on:
   schedule:
-    # 09h, 15h e 21h no horário de Brasília (UTC-3).
-    - cron: '0 12,18,0 * * *'
+    # 09h no horário de Brasília (UTC-3), uma vez ao dia.
+    #
+    # A cadência é limitada pelo estoque, não pela plataforma: os links vêm do
+    # CSV do painel da Shopee, que é gerado à mão. A 3 pins por execução e 3
+    # execuções diárias o lote de 20 acabava em dois dias e o pipeline passava a
+    # rodar sem nada para publicar. Um por dia estica o que existe e mantém a
+    # conta com movimento diário, que é o que o Pinterest premia.
+    - cron: '0 12 * * *'
   workflow_dispatch:
     inputs:
       batch_size:
         description: 'Quantos pins publicar nesta execução'
         required: false
-        default: '3'
+        default: '1'
 
 # Duas execuções ao mesmo tempo brigariam pelo banco e pelo push.
 concurrency:
@@ -30,7 +36,7 @@ jobs:
     env:
       MINER_SOURCE: panel
       PUBLIC_BASE_URL: https://bot-pinterest.vercel.app
-      PUBLISH_BATCH_SIZE: ${{ github.event.inputs.batch_size || '3' }}
+      PUBLISH_BATCH_SIZE: ${{ github.event.inputs.batch_size || '1' }}
       DATABASE_PATH: storage/affiliate.db
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       SHOPEE_DATAFEED_URL: ${{ secrets.SHOPEE_DATAFEED_URL }}
