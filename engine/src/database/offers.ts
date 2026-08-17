@@ -141,6 +141,7 @@ type OfferUpdate = Partial<
     | 'telegram_caption'
     | 'copy_source'
     | 'feed_at'
+    | 'image_url'
     | 'pin_image_path'
     | 'pinterest_url'
     | 'telegram_message_id'

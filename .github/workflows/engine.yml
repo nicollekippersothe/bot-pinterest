@@ -20,6 +20,11 @@ on:
         description: 'Quantos pins publicar nesta execução'
         required: false
         default: '1'
+      refresh_photos:
+        description: 'Reavaliar a foto das ofertas na fila antes de publicar'
+        required: false
+        type: boolean
+        default: false
 
 # Duas execuções ao mesmo tempo brigariam pelo banco e pelo push.
 concurrency:
@@ -76,6 +81,12 @@ jobs:
           else
             echo "Datafeed veio do cache ($(du -h storage/datafeed.csv | cut -f1))"
           fi
+
+      # A foto é escolhida na mineração, então oferta já gravada não reavalia
+      # sozinha. Este passo aplica um critério novo ao que já está no banco.
+      - name: Reavaliar fotos da fila
+        if: inputs.refresh_photos
+        run: npm run engine:photos -- --apply
 
       - name: Rodar o pipeline
         run: npm run engine

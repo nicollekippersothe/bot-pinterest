@@ -18,7 +18,8 @@
     "engine:test": "tsx engine/src/scripts/smoke.ts",
     "engine:datafeed": "tsx engine/src/scripts/datafeed.ts",
     "engine:links": "tsx engine/src/scripts/links.ts",
-    "engine:feed": "tsx engine/src/scripts/feed.ts"
+    "engine:feed": "tsx engine/src/scripts/feed.ts",
+    "engine:photos": "tsx engine/src/scripts/photos.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",
