@@ -1,6 +1,7 @@
 import { config } from '../config/index.js';
 import { logger } from '../utils/logger.js';
 import { pickUsableImage } from './image-quality.js';
+import { pickPhotoWithVision } from './photo-vision.js';
 import type { MinedOffer } from './types.js';
 
 /**
@@ -97,7 +98,12 @@ export async function resolveProductImage(productUrl: string): Promise<string | 
     const gallery = extractGalleryImages(html);
     if (gallery.length === 0) return extractOgImage(html);
 
-    // Descarta rótulo/código de barras antes de gastar tempo gerando o pin.
+    // A visão acha a foto ambientada, que é o que faz o pin converter. Sem
+    // chave ou com qualquer falha, cai na heurística — que só sabe descartar
+    // rótulo e código de barras.
+    const chosen = await pickPhotoWithVision(gallery, fetchImage);
+    if (chosen) return chosen;
+
     return pickUsableImage(gallery, config.productImageIndex, fetchImage);
   } catch (error) {
     logger.debug(`falha ao ler página do produto: ${(error as Error).message}`);

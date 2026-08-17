@@ -40,6 +40,17 @@ export const config = {
   anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? '',
   anthropicModel: process.env.ANTHROPIC_MODEL ?? 'claude-opus-5',
 
+  /**
+   * Escolha da foto do anúncio por visão de modelo. Sem a chave o pipeline cai
+   * na heurística, que erra: infográfico e colagem de "como usar" são fotos com
+   * texto por cima e nenhuma estatística de imagem os separa de uma cena.
+   *
+   * O free tier do Google AI Studio cobre este uso com folga — uma chamada por
+   * oferta, algumas dezenas por lote.
+   */
+  geminiApiKey: process.env.GEMINI_API_KEY ?? '',
+  geminiModel: process.env.GEMINI_MODEL ?? 'gemini-3.6-flash',
+
   telegram: {
     botToken: process.env.TELEGRAM_BOT_TOKEN ?? '',
     channelId: process.env.TELEGRAM_CHANNEL_ID ?? '',
