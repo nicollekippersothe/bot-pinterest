@@ -1,5 +1,26 @@
 [
   {
+    "id": 13,
+    "feedAt": "2026-08-17T12:51:39.770Z",
+    "title": "Percarbonato 100% Puro Tira Manchas Roupas Brancas e Coloridas por R$ 16,99 (Oferta)",
+    "description": "Percarbonato 100% Puro Tira Manchas Roupas Brancas e Coloridas sai por R$ 16,99 na Shopee. Ideal para quem procura achadinhos com bom custo-benefício. Confira a oferta antes que o preço mude.",
+    "hashtags": [
+      "#achadinhos",
+      "#promocao",
+      "#shopee",
+      "#ofertadodia",
+      "#economia"
+    ],
+    "pinterestDescription": "Percarbonato 100% Puro Tira Manchas Roupas Brancas e Coloridas sai por R$ 16,99 na Shopee. Ideal para quem procura achadinhos com bom custo-benefício. Confira a oferta antes que o preço mude.\n\n#achadinhos #promocao #shopee #ofertadodia #economia",
+    "imageUrl": "https://bot-pinterest.vercel.app/pins/13-percarbonato-100-puro-tira-manchas-roupa.jpg",
+    "link": "https://s.shopee.com.br/4Az59ihWN1",
+    "price": 16.99,
+    "originalPrice": null,
+    "discount": 0,
+    "commissionRate": 7.55,
+    "category": null
+  },
+  {
     "id": 5,
     "feedAt": "2026-08-16T23:16:09.796Z",
     "title": "Areia Catbio Biodegradável 4 Kg - Max Clean - Grãos Finos por R$ 47,90 (Oferta)",
@@ -99,27 +120,6 @@
     "imageUrl": "https://bot-pinterest.vercel.app/pins/14-percarbonato-de-sodio-100-puro-limpeza-e.jpg",
     "link": "https://s.shopee.com.br/5VUSkHMcmo",
     "price": 10,
-    "originalPrice": null,
-    "discount": 0,
-    "commissionRate": 11.5,
-    "category": null
-  },
-  {
-    "id": 6,
-    "feedAt": "2026-08-16T21:11:16.764Z",
-    "title": "Batedor Misturador Mixer Elétrico para Bebidas Leite Café Clara de Ovo 2 em 1 por R$ 18,99 (Oferta)",
-    "description": "Batedor Misturador Mixer Elétrico para Bebidas Leite Café Clara de Ovo 2 em 1 sai por R$ 18,99 na Shopee. Ideal para quem procura achadinhos com bom custo-benefício. Confira a oferta antes que o preço mude.",
-    "hashtags": [
-      "#achadinhos",
-      "#promocao",
-      "#shopee",
-      "#ofertadodia",
-      "#economia"
-    ],
-    "pinterestDescription": "Batedor Misturador Mixer Elétrico para Bebidas Leite Café Clara de Ovo 2 em 1 sai por R$ 18,99 na Shopee. Ideal para quem procura achadinhos com bom custo-benefício. Confira a oferta antes que o preço mude.\n\n#achadinhos #promocao #shopee #ofertadodia #economia",
-    "imageUrl": "https://bot-pinterest.vercel.app/pins/6-batedor-misturador-mixer-eletrico-para-b.jpg",
-    "link": "https://s.shopee.com.br/5LB2XyNG7n",
-    "price": 18.99,
     "originalPrice": null,
     "discount": 0,
     "commissionRate": 11.5,
