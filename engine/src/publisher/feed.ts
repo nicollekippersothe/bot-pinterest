@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { config, PUBLIC_DIR, PUBLIC_PINS_DIR } from '../config/index.js';
-import { listByStatus, updateOffer, type OfferRow } from '../database/offers.js';
+import { findById, listByStatus, updateOffer, type OfferRow } from '../database/offers.js';
 import { OFFER_STATUS } from '../database/schema.js';
 import { generatePin } from '../processor/image.js';
 import { logger } from '../utils/logger.js';
@@ -38,11 +38,29 @@ export interface FeedItem {
   category: string | null;
 }
 
-/** Descrição final: texto de conversão + hashtags, dentro do limite do Pinterest. */
+/**
+ * Identificação obrigatória de publicidade.
+ *
+ * Pin com link de afiliado precisa ser identificado como tal — é regra do
+ * Pinterest e é o que as normas de publicidade exigem de qualquer conteúdo
+ * pago. `#publi` é o termo que o público brasileiro reconhece; `#ad` é o que os
+ * sistemas automáticos da plataforma procuram. Vai no começo, porque a
+ * descrição aparece truncada no feed e divulgação escondida não vale.
+ */
+const DISCLOSURE = '#publi #ad';
+
+/** Descrição final: divulgação + texto de conversão + hashtags, no limite do Pinterest. */
 function buildPinterestDescription(offer: OfferRow): string {
   const description = offer.pin_description ?? offer.title;
-  const hashtags = parseHashtags(offer.hashtags).slice(0, 6).join(' ');
-  const combined = hashtags ? `${description}\n\n${hashtags}` : description;
+  const hashtags = parseHashtags(offer.hashtags)
+    .filter((tag) => !/^#(publi|ad|afiliado|publicidade)$/i.test(tag))
+    .slice(0, 6)
+    .join(' ');
+
+  const parts = [`${DISCLOSURE} ${description}`];
+  if (hashtags) parts.push(hashtags);
+  const combined = parts.join('\n\n');
+
   return combined.length <= 800 ? combined : combined.slice(0, 797).trimEnd() + '…';
 }
 
@@ -62,6 +80,20 @@ function toFeedItem(offer: OfferRow, fileName: string, feedAt: string): FeedItem
     commissionRate: offer.commission_rate,
     category: offer.category,
   };
+}
+
+/**
+ * Recalcula a descrição de um item que já estava na janela.
+ *
+ * A descrição é montada uma vez, na entrada do feed. Sem isto, uma correção no
+ * texto — como a identificação de publicidade — só valeria para oferta nova, e
+ * o que está na fila sairia sem ela. O GUID não muda, então item já publicado
+ * não é republicado por causa disso.
+ */
+function refreshDescription(item: FeedItem): FeedItem {
+  const offer = findById(item.id);
+  if (!offer) return item;
+  return { ...item, pinterestDescription: buildPinterestDescription(offer) };
 }
 
 /**
@@ -138,7 +170,9 @@ export async function publishFeed(limit = config.publishBatchSize): Promise<Feed
   // com o feedAt anterior. Sem descartar a versão velha, o mesmo produto sairia
   // duas vezes no RSS — com GUIDs diferentes, virando dois pins.
   const addedIds = new Set(added.map((item) => item.id));
-  const previous = readFeed().filter((item) => !addedIds.has(item.id));
+  const previous = readFeed()
+    .filter((item) => !addedIds.has(item.id))
+    .map(refreshDescription);
   const feed = [...added, ...previous].slice(0, config.feedMaxItems);
   fs.mkdirSync(PUBLIC_DIR, { recursive: true });
   fs.writeFileSync(feedPath(), JSON.stringify(feed, null, 2));

@@ -34,8 +34,10 @@ function formatBRL(value: number): string {
 export function buildCaption(offer: OfferRow): string {
   const blocks: string[] = [];
 
+  // O botão leva a link de afiliado, então o post é publicidade e precisa ser
+  // identificado como tal — mesma exigência do pin no Pinterest.
   const headline = offer.telegram_caption?.trim() || offer.pin_title?.trim() || offer.title;
-  blocks.push(escapeHtml(headline));
+  blocks.push(`<b>#publi</b> ${escapeHtml(headline)}`);
 
   const priceLine = offer.original_price
     ? `De <s>${formatBRL(offer.original_price)}</s> por <b>${formatBRL(offer.price)}</b>`
