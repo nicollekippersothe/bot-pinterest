@@ -1,5 +1,26 @@
 [
   {
+    "id": 19,
+    "feedAt": "2026-08-22T12:43:27.908Z",
+    "title": "Jogo de Lençol 400 Fios Micropercal Com Fronha em Ponto Palito por R$ 13,80 (Oferta)",
+    "description": "Jogo de Lençol 400 Fios Micropercal Com Fronha em Ponto Palito sai por R$ 13,80 na Shopee. Ideal para quem procura achadinhos com bom custo-benefício. Confira a oferta antes que o preço mude.",
+    "hashtags": [
+      "#achadinhos",
+      "#promocao",
+      "#shopee",
+      "#ofertadodia",
+      "#economia"
+    ],
+    "pinterestDescription": "#publi #ad Jogo de Lençol 400 Fios Micropercal Com Fronha em Ponto Palito sai por R$ 13,80 na Shopee. Ideal para quem procura achadinhos com bom custo-benefício. Confira a oferta antes que o preço mude.\n\n#achadinhos #promocao #shopee #ofertadodia #economia",
+    "imageUrl": "https://bot-pinterest.vercel.app/pins/19-jogo-de-lencol-400-fios-micropercal-com-.jpg",
+    "link": "https://s.shopee.com.br/4fvLkdfcMA",
+    "price": 13.8,
+    "originalPrice": null,
+    "discount": 0,
+    "commissionRate": 3.5,
+    "category": null
+  },
+  {
     "id": 15,
     "feedAt": "2026-08-21T12:51:13.425Z",
     "title": "Jogo de Lençol 400 Fios Ponto Palito Tecido Leve Suave Berço Solteiro Casal Queen King 02 e 03…",
@@ -102,27 +123,6 @@
     "originalPrice": null,
     "discount": 0,
     "commissionRate": 6.8,
-    "category": null
-  },
-  {
-    "id": 13,
-    "feedAt": "2026-08-17T12:51:39.770Z",
-    "title": "Percarbonato 100% Puro Tira Manchas Roupas Brancas e Coloridas por R$ 16,99 (Oferta)",
-    "description": "Percarbonato 100% Puro Tira Manchas Roupas Brancas e Coloridas sai por R$ 16,99 na Shopee. Ideal para quem procura achadinhos com bom custo-benefício. Confira a oferta antes que o preço mude.",
-    "hashtags": [
-      "#achadinhos",
-      "#promocao",
-      "#shopee",
-      "#ofertadodia",
-      "#economia"
-    ],
-    "pinterestDescription": "#publi #ad Percarbonato 100% Puro Tira Manchas Roupas Brancas e Coloridas sai por R$ 16,99 na Shopee. Ideal para quem procura achadinhos com bom custo-benefício. Confira a oferta antes que o preço mude.\n\n#achadinhos #promocao #shopee #ofertadodia #economia",
-    "imageUrl": "https://bot-pinterest.vercel.app/pins/13-percarbonato-100-puro-tira-manchas-roupa.jpg",
-    "link": "https://s.shopee.com.br/4Az59ihWN1",
-    "price": 16.99,
-    "originalPrice": null,
-    "discount": 0,
-    "commissionRate": 7.55,
     "category": null
   }
 ]
