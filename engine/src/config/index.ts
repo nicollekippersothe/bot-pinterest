@@ -111,6 +111,19 @@ export const config = {
    */
   feedMaxItems: asInt(process.env.FEED_MAX_ITEMS, 6),
 
+  /**
+   * Formato do pin.
+   *
+   * - `clean`  — só a fotografia, sem faixa de preço e sem texto
+   * - `banner` — foto em cima, faixa escura com preço e desconto embaixo
+   *
+   * O `banner` foi o formato dos primeiros ~15 pins, que deram zero clique. No
+   * Pinterest a foto é o anúncio, e faixa de preço faz o pin parecer anúncio de
+   * marketplace. O preço não some: fica no título e na descrição, que a
+   * plataforma mostra ao lado do pin.
+   */
+  pinStyle: (process.env.PIN_STYLE ?? 'clean') as 'clean' | 'banner',
+
   /** Quantas ofertas publicar por ciclo — cadência conservadora evita bloqueio. */
   publishBatchSize: asInt(process.env.PUBLISH_BATCH_SIZE, 3),
 

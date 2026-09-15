@@ -49,7 +49,7 @@ const SCENE_ENTROPY = 5;
 const SCENE_MAX_BORDER_WHITE = 0.5;
 
 /** Fração da moldura que é branco puro — mede fundo de catálogo. */
-async function measureBorderWhite(image: ReturnType<typeof sharp>): Promise<number> {
+export async function measureBorderWhite(image: ReturnType<typeof sharp>): Promise<number> {
   const size = 200;
   const { data } = await image
     .clone()

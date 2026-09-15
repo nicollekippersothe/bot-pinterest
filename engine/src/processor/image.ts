@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import sharp from 'sharp';
-import { IMAGES_DIR, PIN_HEIGHT, PIN_WIDTH } from '../config/index.js';
+import { config, IMAGES_DIR, PIN_HEIGHT, PIN_WIDTH } from '../config/index.js';
+import { measureBorderWhite } from '../miner/image-quality.js';
 import { logger } from '../utils/logger.js';
 import { slugify } from '../utils/links.js';
 import type { OfferRow } from '../database/offers.js';
@@ -13,6 +14,9 @@ const DOWNLOAD_TIMEOUT_MS = 20_000;
 /** A foto ocupa a largura toda e 72% da altura; o resto é a faixa de texto. */
 const PHOTO_HEIGHT = Math.round(PIN_HEIGHT * 0.72);
 const BANNER_HEIGHT = PIN_HEIGHT - PHOTO_HEIGHT;
+
+/** Acima disso a moldura é branca: foto de catálogo, não pode ser cortada. */
+const CATALOG_BORDER_WHITE = 0.5;
 
 export interface PinImageResult {
   /** Caminho absoluto do arquivo gerado. */
@@ -116,6 +120,73 @@ async function buildPhotoLayer(source: Buffer): Promise<Buffer> {
     .toBuffer();
 }
 
+/**
+ * Pin sem faixa de preço e sem texto: só a fotografia.
+ *
+ * No Pinterest a foto é o anúncio — faixa de preço e selo de desconto fazem o
+ * pin parecer anúncio de marketplace, que é justamente o que as pessoas rolam
+ * sem ver. O preço não se perde: continua no título e na descrição, que o
+ * Pinterest mostra ao lado do pin.
+ *
+ * O enquadramento depende do tipo de foto, e a moldura branca diz qual é:
+ *
+ * - **Foto ambientada** (moldura colorida): corta em 2:3 sangrando, guiado pela
+ *   região de maior interesse. É o formato que preenche a tela no feed.
+ * - **Foto de catálogo** (moldura branca): cortar decapitaria o produto, que
+ *   costuma ocupar o quadro inteiro. Entra inteira, centralizada, com margem
+ *   sobre um fundo claro tirado da própria imagem.
+ */
+async function buildCleanPin(source: Buffer): Promise<Buffer> {
+  const borderWhite = await measureBorderWhite(sharp(source));
+
+  if (borderWhite <= CATALOG_BORDER_WHITE) {
+    return sharp(source)
+      .resize(PIN_WIDTH, PIN_HEIGHT, { fit: 'cover', position: sharp.strategy.attention })
+      .jpeg({ quality: 90, chromaSubsampling: '4:4:4' })
+      .toBuffer();
+  }
+
+  // Fundo tirado da própria foto: nunca destoa do produto, e o branco puro
+  // da Shopee some no feed branco do Pinterest.
+  const { dominant } = await sharp(source).stats();
+  const background = {
+    r: Math.round(dominant.r * 0.12 + 255 * 0.88),
+    g: Math.round(dominant.g * 0.12 + 255 * 0.88),
+    b: Math.round(dominant.b * 0.12 + 255 * 0.88),
+  };
+
+  const inner = Math.round(PIN_WIDTH * 0.86);
+  // A foto de catálogo já vem com margem branca própria. Sem aparar, ela soma
+  // com a margem do pin e o produto fica pequeno num quadro alto e vazio.
+  // `trim` falha em imagem sem borda uniforme — daí o fallback para a original.
+  let product: Buffer;
+  try {
+    product = await sharp(source).trim({ threshold: 12 }).toBuffer();
+  } catch {
+    product = source;
+  }
+
+  product = await sharp(product)
+    .resize(inner, Math.round(PIN_HEIGHT * 0.78), { fit: 'inside', withoutEnlargement: false })
+    .toBuffer();
+  const { width = inner, height = inner } = await sharp(product).metadata();
+
+  return sharp({
+    create: { width: PIN_WIDTH, height: PIN_HEIGHT, channels: 3, background },
+  })
+    .composite([
+      {
+        input: product,
+        left: Math.round((PIN_WIDTH - width) / 2),
+        // Levemente acima do centro ótico: o rodapé do pin fica encoberto pelo
+        // título que o Pinterest desenha por cima.
+        top: Math.round((PIN_HEIGHT - height) / 2 - PIN_HEIGHT * 0.04),
+      },
+    ])
+    .jpeg({ quality: 90, chromaSubsampling: '4:4:4' })
+    .toBuffer();
+}
+
 /** Faixa inferior: nome do produto, preço original riscado e preço em destaque. */
 function buildBannerSvg(offer: OfferRow): Buffer {
   const price = escapeXml(formatBRL(offer.price));
@@ -159,18 +230,10 @@ function buildBannerSvg(offer: OfferRow): Buffer {
 
 /** Monta o pin 1000x1500 (2:3) exigido pelo Pinterest. */
 export async function buildPinImage(offer: OfferRow, imageBuffer: Buffer): Promise<PinImageResult> {
-  const [background, photo] = await Promise.all([
-    buildBackground(imageBuffer),
-    buildPhotoLayer(imageBuffer),
-  ]);
-
-  const composed = await sharp(background)
-    .composite([
-      { input: photo, top: 0, left: 0 },
-      { input: buildBannerSvg(offer), top: 0, left: 0 },
-    ])
-    .jpeg({ quality: 90, chromaSubsampling: '4:4:4' })
-    .toBuffer();
+  const composed =
+    config.pinStyle === 'clean'
+      ? await buildCleanPin(imageBuffer)
+      : await buildBannerPin(offer, imageBuffer);
 
   fs.mkdirSync(IMAGES_DIR, { recursive: true });
   const fileName = `${offer.id}-${slugify(offer.title, 40) || 'pin'}.jpg`;
@@ -179,6 +242,22 @@ export async function buildPinImage(offer: OfferRow, imageBuffer: Buffer): Promi
 
   logger.debug(`Pin gerado em ${filePath}`);
   return { filePath, width: PIN_WIDTH, height: PIN_HEIGHT };
+}
+
+/** Formato antigo: foto em cima, faixa escura com preço embaixo. */
+async function buildBannerPin(offer: OfferRow, imageBuffer: Buffer): Promise<Buffer> {
+  const [background, photo] = await Promise.all([
+    buildBackground(imageBuffer),
+    buildPhotoLayer(imageBuffer),
+  ]);
+
+  return sharp(background)
+    .composite([
+      { input: photo, top: 0, left: 0 },
+      { input: buildBannerSvg(offer), top: 0, left: 0 },
+    ])
+    .jpeg({ quality: 90, chromaSubsampling: '4:4:4' })
+    .toBuffer();
 }
 
 /** Baixa a imagem da oferta e gera o pin. Lança se a oferta não tiver imagem. */
