@@ -1,0 +1,120 @@
+name: Lote de pins (CSV para o Pinterest)
+
+# Gera um arquivo CSV para o "Importar conteúdo" do Pinterest, com os pins já
+# agendados por data. É o caminho oficial que não depende de API nem de Make.
+#
+# Depois de rodar:
+#   1. Espere o deploy da Vercel terminar (o Pinterest baixa as imagens de lá).
+#   2. Baixe o CSV em "Artifacts" no fim da página da execução.
+#   3. Pinterest (no computador) > Configurações > Importar conteúdo > Upload.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dias:
+        description: 'Quantos dias o lote cobre'
+        required: true
+        default: '14'
+      por_dia:
+        description: 'Pins por dia'
+        required: true
+        default: '3'
+      quadro:
+        description: 'Nome EXATO do quadro no Pinterest (nome diferente cria um quadro novo)'
+        required: true
+      inicio:
+        description: 'Primeiro dia da agenda (AAAA-MM-DD, UTC). Vazio = amanhã'
+        required: false
+
+# Mesmo grupo do motor diário: os dois mexem no mesmo banco.
+concurrency:
+  group: engine
+  cancel-in-progress: false
+
+jobs:
+  lote:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+
+    env:
+      MINER_SOURCE: ${{ secrets.AFFILIATE_APP_ID != '' && 'api' || 'panel' }}
+      AFFILIATE_APP_ID: ${{ secrets.AFFILIATE_APP_ID }}
+      AFFILIATE_SECRET: ${{ secrets.AFFILIATE_SECRET }}
+      # Mineração e processamento trazem pins suficientes para o lote inteiro.
+      MINER_LIMIT: ${{ inputs.dias * inputs.por_dia }}
+      PUBLIC_BASE_URL: https://bot-pinterest.vercel.app
+      DATABASE_PATH: storage/affiliate.db
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      SHOPEE_DATAFEED_URL: ${{ secrets.SHOPEE_DATAFEED_URL }}
+      PINTEREST_BOARD_NAME: ${{ inputs.quadro }}
+      # Sem TELEGRAM_*: este fluxo não publica em canal nenhum.
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Instalar fontes
+        run: sudo apt-get update && sudo apt-get install -y fonts-dejavu-core
+
+      - run: npm ci
+
+      - name: Cache do datafeed
+        id: cache-datafeed
+        uses: actions/cache@v4
+        with:
+          path: storage/datafeed.csv
+          key: datafeed-${{ github.run_id }}
+          restore-keys: datafeed-
+
+      - name: Baixar datafeed
+        if: env.SHOPEE_DATAFEED_URL != ''
+        run: |
+          if [ ! -f storage/datafeed.csv ]; then
+            npm run engine:datafeed
+          else
+            echo "Datafeed veio do cache"
+          fi
+
+      - name: Minerar e gerar os pins
+        run: npm run engine
+
+      - name: Gerar o CSV
+        run: |
+          ARGS="--dias ${{ inputs.dias }} --por-dia ${{ inputs.por_dia }}"
+          if [ -n "${{ inputs.inicio }}" ]; then ARGS="$ARGS --inicio ${{ inputs.inicio }}"; fi
+          npm run engine:csv -- $ARGS
+
+      - name: Commitar as imagens e o banco
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A public storage/affiliate.db
+          if git diff --staged --quiet; then
+            echo "Nada novo para commitar."
+            exit 0
+          fi
+          git commit -m "chore(engine): lote de pins para o Pinterest [skip ci]"
+          git pull --rebase origin ${{ github.ref_name }}
+          git push origin HEAD:${{ github.ref_name }}
+
+      - name: Guardar o CSV
+        uses: actions/upload-artifact@v4
+        with:
+          name: pinterest-lote-csv
+          path: storage/exports/*.csv
+          if-no-files-found: error
+
+      - name: Resumo
+        if: always()
+        run: |
+          echo "### Lote de pins para o Pinterest" >> $GITHUB_STEP_SUMMARY
+          echo "1. Espere o deploy da Vercel terminar (imagens no ar)." >> $GITHUB_STEP_SUMMARY
+          echo "2. Baixe o CSV em **Artifacts** (pinterest-lote-csv)." >> $GITHUB_STEP_SUMMARY
+          echo "3. Pinterest > Configurações > Importar conteúdo > Upload (no computador)." >> $GITHUB_STEP_SUMMARY

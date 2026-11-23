@@ -50,7 +50,7 @@ export interface FeedItem {
 const DISCLOSURE = '#publi #ad';
 
 /** Descrição final: divulgação + texto de conversão + hashtags, no limite do Pinterest. */
-function buildPinterestDescription(offer: OfferRow): string {
+export function buildPinterestDescription(offer: OfferRow, maxLength = 800): string {
   const description = offer.pin_description ?? offer.title;
   const hashtags = parseHashtags(offer.hashtags)
     .filter((tag) => !/^#(publi|ad|afiliado|publicidade)$/i.test(tag))
@@ -61,7 +61,7 @@ function buildPinterestDescription(offer: OfferRow): string {
   if (hashtags) parts.push(hashtags);
   const combined = parts.join('\n\n');
 
-  return combined.length <= 800 ? combined : combined.slice(0, 797).trimEnd() + '…';
+  return combined.length <= maxLength ? combined : combined.slice(0, maxLength - 3).trimEnd() + '…';
 }
 
 function toFeedItem(offer: OfferRow, fileName: string, feedAt: string): FeedItem {
@@ -104,7 +104,7 @@ function refreshDescription(item: FeedItem): FeedItem {
  * não existe ali. Antes disso ser tratado, a oferta era pulada sem receber
  * `feed_at` — então era pulada de novo em toda execução, para sempre.
  */
-async function ensurePin(offer: OfferRow): Promise<string | null> {
+export async function ensurePin(offer: OfferRow): Promise<string | null> {
   if (offer.pin_image_path && fs.existsSync(offer.pin_image_path)) {
     return offer.pin_image_path;
   }

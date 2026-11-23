@@ -21,7 +21,9 @@
     "engine:feed": "tsx engine/src/scripts/feed.ts",
     "engine:photos": "tsx engine/src/scripts/photos.ts",
     "engine:health": "tsx engine/src/scripts/health.ts",
-    "engine:test:api": "tsx engine/src/scripts/test-api-miner.ts"
+    "engine:test:api": "tsx engine/src/scripts/test-api-miner.ts",
+    "engine:csv": "tsx engine/src/scripts/export-csv.ts",
+    "engine:test:csv": "tsx engine/src/scripts/test-csv.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",
