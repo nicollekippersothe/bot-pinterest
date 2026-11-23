@@ -4,6 +4,10 @@
  * Existe porque a falha anterior foi silenciosa: o pipeline rodou todo dia por quase
  * 7 semanas sem publicar nenhum pin novo, e ninguém foi avisado.
  *
+ * Como avisa: a execução FALHA (X vermelho no GitHub Actions), e o GitHub manda e-mail
+ * de workflow com falha. Não precisa de Telegram. Se ALERT_TELEGRAM_* existirem, também
+ * avisa por lá. Para só registrar no log: HEALTH_FAIL_ON_PROBLEM=false.
+ *
  * Uso:
  *   npm run engine:health               verifica estoque e ritmo
  *   npm run engine:health -- --falhou   avisa que a execução do GitHub Actions falhou
@@ -62,6 +66,8 @@ async function main(): Promise<void> {
     );
     if (report.problems.length > 0) {
       await sendAlert(`⚠️ Motor de pins com problema:\n- ${report.problems.join('\n- ')}${runUrl ? `\n${runUrl}` : ''}`);
+      logger.error(`Motor de pins com problema: ${report.problems.join(' ')}`);
+      if (process.env.HEALTH_FAIL_ON_PROBLEM !== 'false') process.exitCode = 1;
     }
   } finally {
     closeDb();
