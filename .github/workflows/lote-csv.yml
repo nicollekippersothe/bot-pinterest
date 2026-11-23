@@ -42,8 +42,10 @@ jobs:
       MINER_SOURCE: ${{ secrets.AFFILIATE_APP_ID != '' && 'api' || 'panel' }}
       AFFILIATE_APP_ID: ${{ secrets.AFFILIATE_APP_ID }}
       AFFILIATE_SECRET: ${{ secrets.AFFILIATE_SECRET }}
-      # Mineração e processamento trazem pins suficientes para o lote inteiro.
-      MINER_LIMIT: ${{ inputs.dias * inputs.por_dia }}
+      # As entradas passam por variável de ambiente (nunca coladas dentro do script).
+      DIAS: ${{ inputs.dias }}
+      POR_DIA: ${{ inputs.por_dia }}
+      INICIO: ${{ inputs.inicio }}
       PUBLIC_BASE_URL: https://bot-pinterest.vercel.app
       DATABASE_PATH: storage/affiliate.db
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -82,13 +84,21 @@ jobs:
             echo "Datafeed veio do cache"
           fi
 
+      # O GitHub Actions não faz conta em expressões: o tamanho do lote sai daqui.
+      - name: Calcular o tamanho do lote
+        run: |
+          [[ "$DIAS" =~ ^[0-9]+$ && "$POR_DIA" =~ ^[0-9]+$ ]] || { echo "dias e por_dia precisam ser números inteiros"; exit 1; }
+          if [ -n "$INICIO" ]; then [[ "$INICIO" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || { echo "inicio deve ser AAAA-MM-DD"; exit 1; }; fi
+          echo "MINER_LIMIT=$(( DIAS * POR_DIA ))" >> "$GITHUB_ENV"
+          echo "Lote: $DIAS dia(s) x $POR_DIA por dia = $(( DIAS * POR_DIA )) pin(s)"
+
       - name: Minerar e gerar os pins
         run: npm run engine
 
       - name: Gerar o CSV
         run: |
-          ARGS="--dias ${{ inputs.dias }} --por-dia ${{ inputs.por_dia }}"
-          if [ -n "${{ inputs.inicio }}" ]; then ARGS="$ARGS --inicio ${{ inputs.inicio }}"; fi
+          ARGS="--dias $DIAS --por-dia $POR_DIA"
+          if [ -n "$INICIO" ]; then ARGS="$ARGS --inicio $INICIO"; fi
           npm run engine:csv -- $ARGS
 
       - name: Commitar as imagens e o banco
