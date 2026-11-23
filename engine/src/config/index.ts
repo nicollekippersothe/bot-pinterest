@@ -26,10 +26,11 @@ export const PUBLIC_PINS_DIR = path.join(PUBLIC_DIR, 'pins');
 /**
  * Fonte de mineração:
  * - `panel`  — CSVs do painel de afiliados (ÚNICA com link que gera comissão)
+ * - `api`    — API de Afiliados da Shopee (automática, link rastreado, sem CSV)
  * - `mock`   — payload simulado, sem rede
  * - `shopee` — busca pública; links NÃO rastreiam comissão
  */
-export type MinerSource = 'mock' | 'shopee' | 'panel';
+export type MinerSource = 'mock' | 'shopee' | 'panel' | 'api';
 
 function asInt(value: string | undefined, fallback: number): number {
   const parsed = Number.parseInt(value ?? '', 10);
@@ -73,6 +74,18 @@ export const config = {
     limit: asInt(process.env.MINER_LIMIT, 10),
     /** Desconto mínimo (%) para uma oferta ser considerada. */
     minDiscount: asInt(process.env.MINER_MIN_DISCOUNT, 10),
+  },
+
+  /** API de Afiliados da Shopee (fonte `api`). As credenciais são segredos: nunca versione. */
+  affiliateApi: {
+    appId: process.env.AFFILIATE_APP_ID ?? '',
+    secret: process.env.AFFILIATE_SECRET ?? '',
+    /** Páginas (de 40 produtos) lidas por palavra-chave. */
+    pages: asInt(process.env.AFFILIATE_PAGES, 3),
+    /** Comissão mínima (%). */
+    minCommission: asInt(process.env.AFFILIATE_MIN_COMMISSION, 8),
+    minSales: asInt(process.env.AFFILIATE_MIN_SALES, 100),
+    minRating: Number(process.env.AFFILIATE_MIN_RATING ?? 4.5),
   },
 
   /** ID de afiliado Shopee (usado só pela fonte `shopee`, que não rastreia). */
