@@ -39,7 +39,13 @@ jobs:
       contents: write
 
     env:
-      MINER_SOURCE: panel
+      # Com as credenciais da API de Afiliados cadastradas, o estoque é automático.
+      # Sem elas, cai no CSV do painel (comportamento antigo).
+      MINER_SOURCE: ${{ secrets.AFFILIATE_APP_ID != '' && 'api' || 'panel' }}
+      AFFILIATE_APP_ID: ${{ secrets.AFFILIATE_APP_ID }}
+      AFFILIATE_SECRET: ${{ secrets.AFFILIATE_SECRET }}
+      ALERT_TELEGRAM_BOT_TOKEN: ${{ secrets.ALERT_TELEGRAM_BOT_TOKEN }}
+      ALERT_TELEGRAM_CHAT_ID: ${{ secrets.ALERT_TELEGRAM_CHAT_ID }}
       PUBLIC_BASE_URL: https://bot-pinterest.vercel.app
       PUBLISH_BATCH_SIZE: ${{ github.event.inputs.batch_size || '1' }}
       DATABASE_PATH: storage/affiliate.db
@@ -107,6 +113,16 @@ jobs:
           # Outra execução pode ter empurrado commits nesse meio-tempo.
           git pull --rebase origin ${{ github.ref_name }}
           git push origin HEAD:${{ github.ref_name }}
+
+      # Avisa no Telegram se não há pin novo há dias ou se a fila de ofertas zerou.
+      # A falha anterior foi silenciosa: o motor rodou meses sem publicar nada.
+      - name: Checar saúde
+        if: success()
+        run: npm run engine:health
+
+      - name: Avisar falha
+        if: failure()
+        run: npm run engine:health -- --falhou
 
       - name: Resumo
         if: always()

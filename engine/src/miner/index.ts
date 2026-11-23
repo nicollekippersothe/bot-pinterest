@@ -4,12 +4,14 @@ import { filterNewOffers, insertOffers, type OfferRow } from '../database/offers
 import { mockMiner } from './mock.js';
 import { shopeeMiner } from './shopee.js';
 import { panelMiner } from './panel.js';
+import { apiMiner } from './affiliate-api.js';
 import type { Miner, MinedOffer, MinerOptions } from './types.js';
 
 const MINERS: Record<MinerSource, Miner> = {
   mock: mockMiner,
   shopee: shopeeMiner,
   panel: panelMiner,
+  api: apiMiner,
 };
 
 export function getMiner(source: MinerSource = config.miner.source): Miner {
@@ -52,7 +54,7 @@ export async function mineAndStore(options: MinerOptions = {}): Promise<MineResu
   return { mined, inserted, duplicates: mined.length - inserted.length };
 }
 
-export { mockMiner, shopeeMiner, panelMiner };
+export { mockMiner, shopeeMiner, panelMiner, apiMiner };
 export { loadPanelOffers, parsePanelCsv } from './panel.js';
 export { enrichFromDatafeed, downloadDatafeed } from './datafeed.js';
 export type { Miner, MinedOffer, MinerOptions };
