@@ -1,5 +1,26 @@
 [
   {
+    "id": 24,
+    "feedAt": "2026-11-25T21:06:29.255Z",
+    "title": "Suporte Organizador Porta Copos Descartáveis Para Café Água Cozinha Escritório Cantinho do café…",
+    "description": "Suporte Organizador Porta Copos Descartáveis Para Café Água Cozinha Escritório Cantinho do café sai por R$ 12,88 na Shopee. Ideal para quem procura achadinhos com bom custo-benefício. Confira a oferta antes que o preço mude.",
+    "hashtags": [
+      "#achadinhos",
+      "#promocao",
+      "#shopee",
+      "#ofertadodia",
+      "#economia"
+    ],
+    "pinterestDescription": "#publi #ad Suporte Organizador Porta Copos Descartáveis Para Café Água Cozinha Escritório Cantinho do café sai por R$ 12,88 na Shopee. Ideal para quem procura achadinhos com bom custo-benefício. Confira a oferta antes que o preço mude.\n\n#achadinhos #promocao #shopee #ofertadodia #economia",
+    "imageUrl": "https://bot-pinterest.vercel.app/pins/24-suporte-organizador-porta-copos-descarta.jpg",
+    "link": "https://s.shopee.com.br/30pqZywgIy",
+    "price": 12.88,
+    "originalPrice": null,
+    "discount": 0,
+    "commissionRate": 25,
+    "category": null
+  },
+  {
     "id": 19,
     "feedAt": "2026-08-22T12:43:27.908Z",
     "title": "Jogo de Lençol 400 Fios Micropercal Com Fronha em Ponto Palito por R$ 13,80 (Oferta)",
@@ -102,27 +123,6 @@
     "originalPrice": null,
     "discount": 0,
     "commissionRate": 6.5,
-    "category": null
-  },
-  {
-    "id": 18,
-    "feedAt": "2026-08-18T12:54:44.997Z",
-    "title": "Kit 6/12/18/24 Panos De Limpeza Aço Premium Arear Panela Fogão Toalha Louça Tira Gordura…",
-    "description": "Kit 6/12/18/24 Panos De Limpeza Aço Premium Arear Panela Fogão Toalha Louça Tira Gordura Reutilizável sai por R$ 10,00 na Shopee. Ideal para quem procura achadinhos com bom custo-benefício. Confira a oferta antes que o preço mude.",
-    "hashtags": [
-      "#achadinhos",
-      "#promocao",
-      "#shopee",
-      "#ofertadodia",
-      "#economia"
-    ],
-    "pinterestDescription": "#publi #ad Kit 6/12/18/24 Panos De Limpeza Aço Premium Arear Panela Fogão Toalha Louça Tira Gordura Reutilizável sai por R$ 10,00 na Shopee. Ideal para quem procura achadinhos com bom custo-benefício. Confira a oferta antes que o preço mude.\n\n#achadinhos #promocao #shopee #ofertadodia #economia",
-    "imageUrl": "https://bot-pinterest.vercel.app/pins/18-kit-6-12-18-24-panos-de-limpeza-aco-prem.jpg",
-    "link": "https://s.shopee.com.br/AKZiVDl4xH",
-    "price": 10,
-    "originalPrice": null,
-    "discount": 0,
-    "commissionRate": 6.8,
     "category": null
   }
 ]
